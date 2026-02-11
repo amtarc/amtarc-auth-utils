@@ -3,7 +3,7 @@ layout: home
 hero:
   name: "@amtarc/auth-utils"
   text: Enterprise Authentication Utilities
-  tagline: Production-ready, type-safe authentication and authorization utilities for TypeScript
+  tagline: Production-ready authentication utilities with session management, guards, secure cookies, and comprehensive error handling
   actions:
     - theme: brand
       text: Get Started
@@ -13,80 +13,133 @@ hero:
       link: https://github.com/amtarc/amtarc-auth-utils
 
 features:
-  - icon: 🔒
-    title: Security First
-    details: Built with security best practices and safe defaults
+  - icon: 🔐
+    title: Advanced Session Management
+    details: Multi-device sessions, fingerprinting, storage adapters, and automatic rotation
+  
+  - icon: 🛡️
+    title: Route Protection Guards
+    details: Composable authentication guards with redirect management and open redirect prevention
+  
+  - icon: 🍪
+    title: Secure Cookie Utilities
+    details: RFC 6265 compliant with HMAC signing and AES-256-GCM encryption
+  
+  - icon: ⚠️
+    title: Enterprise Error Handling
+    details: 17+ specialized errors with HTTP status codes and type guards
   
   - icon: 📦
-    title: Modular Design
-    details: Use only what you need with tree-shakable exports
+    title: Tree-Shakeable Modules
+    details: Import only what you need - ~4.4KB total, fully modular
   
   - icon: 🎯
-    title: Type Safe
-    details: Full TypeScript support with comprehensive type definitions
-  
-  - icon: 🚀
-    title: Framework Agnostic
-    details: Works with Express, Next.js, Fastify, and more
-  
-  - icon: 🏢
-    title: Enterprise Ready
-    details: Multi-tenancy, audit logging, and compliance features
-  
-  - icon: ⚡
-    title: High Performance
-    details: Optimized for production with caching and minimal overhead
+    title: Type-Safe & Framework Agnostic
+    details: Full TypeScript support, works with Express, Next.js, Fastify, and more
 ---
 
 ## Quick Start
 
 ```bash
-pnpm add @amtarc/auth-utils
+npm install @amtarc/auth-utils
 ```
 
 ```typescript
-import { createSession, requireSession } from '@amtarc/auth-utils';
+import { createSession, requireAuth } from '@amtarc/auth-utils';
+import { createCookie, signCookie } from '@amtarc/auth-utils/cookies';
+import { MemoryStorageAdapter } from '@amtarc/auth-utils/session';
 
-// Create a session
+// Setup storage
+const storage = new MemoryStorageAdapter();
+
+// Create and store session
 const session = createSession('user-123', {
   expiresIn: 1000 * 60 * 60 * 24, // 24 hours
+  idleTimeout: 1000 * 60 * 30, // 30 minutes
 });
+await storage.set(session.sessionId, session);
 
-// Protect a route
-const guard = requireSession(getSession);
-const handler = guard(async (session) => {
-  return { user: session.user };
+// Create signed cookie
+const cookie = signCookie(
+  createCookie('session', session.sessionId, {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'strict',
+  }),
+  'your-secret-key'
+);
+
+// Protect routes
+const handler = requireAuth(async (context) => {
+  return { user: context.session.userId };
 });
 ```
 
+## What's New in v1.1.0
+
+### 🚀 Major Features
+
+**Session Management:**
+- Multi-device session support with tracking and limits
+- Session fingerprinting for device identification
+- Storage adapters (Memory + custom)
+- Session refresh and ID rotation
+
+**Guards & Route Protection:**
+- `requireAuth` and `requireGuest` guards
+- Composable guards (`requireAny`, `requireAll`)
+- Redirect management with security validations
+
+**Cookie Management:**
+- Secure cookie creation/parsing (RFC 6265)
+- HMAC-SHA256 signing
+- AES-256-GCM encryption
+- Cookie rotation and deletion
+
+**Error Handling:**
+- 17 specialized error classes
+- HTTP status code mapping
+- Type guards for error classification
+- JSON serialization for APIs
+
+### 📊 Stats
+
+- **375 tests** passing (100% pass rate)
+- **>95% coverage** across all modules
+- **~4.4KB total** bundle size (tree-shakeable)
+- **Zero dependencies** (Node.js built-ins only)
+
 ## Why @amtarc/auth-utils?
 
-While authentication frameworks like Auth.js and Better Auth handle the core authentication flow, `@amtarc/auth-utils` provides the **enterprise-grade utilities** you need to build production applications:
+Unlike full authentication frameworks, `@amtarc/auth-utils` provides **focused utilities** you can integrate anywhere:
 
-- **Advanced Session Management** - Multi-device sessions, fingerprinting, and rotation
-- **Flexible Authorization** - RBAC, ABAC, and resource-based permissions
-- **Security Utilities** - CSRF protection, rate limiting, and security headers
-- **Multi-Tenancy Support** - Built-in tenant isolation and context management
-- **Audit & Compliance** - GDPR and SOC 2 compliance helpers
-- **Production Observability** - Metrics, tracing, and structured logging
+**Perfect for:**
+- Enhancing existing auth setups (Auth.js, Better Auth, Clerk)
+- Building custom authentication flows
+- Serverless and edge environments
+- Microservices architectures
+- Adding advanced session features
 
-## Packages
+**Key Advantages:**
+- ✅ Truly framework-agnostic
+- ✅ Minimal bundle size (~4.4KB vs 50KB+)
+- ✅ Tree-shakeable modular exports
+- ✅ Multi-device session support built-in
+- ✅ Session fingerprinting included
+- ✅ Cookie encryption out of the box
+- ✅ Enterprise-grade error handling
 
-- **[@amtarc/auth-utils](./api/core)** - Session management and guards
-- **[@amtarc/auth-utils-security](./api/security)** - CSRF, rate limiting, headers
-- **[@amtarc/auth-utils-authorization](./api/authorization)** - RBAC, ABAC, permissions
-- **[@amtarc/auth-utils-tokens](./api/tokens)** - JWT utilities and token management
-- **[@amtarc/auth-utils-multi-tenancy](./api/multi-tenancy)** - Multi-tenant utilities
-- **[@amtarc/auth-utils-audit](./api/audit)** - Audit logging and compliance
-- **[@amtarc/auth-utils-testing](./api/testing)** - Testing utilities and mocks
+## Modular Design
 
-## Framework Support
+Import only what you need:
 
-Official adapters for popular frameworks:
+```typescript
+// Full imports
+import { createSession, requireAuth } from '@amtarc/auth-utils';
 
-- Express
-- Next.js (App Router & Pages Router)
-- Fastify
-- Hono
-
-The core packages are framework-agnostic and can be used anywhere.
+// Or use specific modules
+import { refreshSession } from '@amtarc/auth-utils/session';
+import { requireGuest } from '@amtarc/auth-utils/guards';
+import { signCookie } from '@amtarc/auth-utils/cookies';
+import { UnauthenticatedError } from '@amtarc/auth-utils/errors';
+```

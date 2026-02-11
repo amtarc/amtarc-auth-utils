@@ -10,7 +10,7 @@ describe('createSession', () => {
     expect(session.userId).toBe('user-123');
     expect(session.expiresAt).toBeInstanceOf(Date);
     expect(session.createdAt).toBeInstanceOf(Date);
-    expect(session.lastActivityAt).toBeInstanceOf(Date);
+    expect(session.lastActiveAt).toBeInstanceOf(Date);
   });
 
   it('should create a session with custom expiration', () => {

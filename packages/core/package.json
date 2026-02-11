@@ -1,33 +1,33 @@
 {
   "name": "@amtarc/auth-utils",
-  "version": "1.0.1",
-  "description": "Core authentication and session management utilities",
+  "version": "1.1.0",
+  "description": "Enterprise-grade authentication utilities with session management, guards, secure cookies, and comprehensive error handling",
   "type": "module",
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
-      "require": "./dist/index.cjs",
-      "types": "./dist/index.d.ts"
+      "require": "./dist/index.cjs"
     },
     "./session": {
+      "types": "./dist/session/index.d.ts",
       "import": "./dist/session/index.js",
-      "require": "./dist/session/index.cjs",
-      "types": "./dist/session/index.d.ts"
+      "require": "./dist/session/index.cjs"
     },
     "./guards": {
+      "types": "./dist/guards/index.d.ts",
       "import": "./dist/guards/index.js",
-      "require": "./dist/guards/index.cjs",
-      "types": "./dist/guards/index.d.ts"
+      "require": "./dist/guards/index.cjs"
     },
     "./cookies": {
+      "types": "./dist/cookies/index.d.ts",
       "import": "./dist/cookies/index.js",
-      "require": "./dist/cookies/index.cjs",
-      "types": "./dist/cookies/index.d.ts"
+      "require": "./dist/cookies/index.cjs"
     },
     "./errors": {
+      "types": "./dist/errors/index.d.ts",
       "import": "./dist/errors/index.js",
-      "require": "./dist/errors/index.cjs",
-      "types": "./dist/errors/index.d.ts"
+      "require": "./dist/errors/index.cjs"
     }
   },
   "files": [
@@ -48,10 +48,17 @@
   },
   "keywords": [
     "authentication",
+    "authorization",
     "session",
+    "session-management",
     "security",
+    "guards",
+    "cookies",
+    "csrf",
+    "fingerprinting",
+    "multi-device",
     "typescript",
-    "guards"
+    "framework-agnostic"
   ],
   "author": "amtarc",
   "license": "MIT",

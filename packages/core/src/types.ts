@@ -19,8 +19,9 @@ export interface Session<TUser extends User = User> {
   user?: TUser;
   expiresAt: Date;
   createdAt: Date;
-  lastActivityAt: Date;
+  lastActiveAt: Date;
   metadata?: Record<string, unknown>;
+  fingerprint?: string;
 }
 
 /**
@@ -47,6 +48,7 @@ export interface CookieOptions {
   domain?: string;
   path?: string;
   maxAge?: number;
+  expires?: Date;
   signed?: boolean;
   encrypted?: boolean;
 }

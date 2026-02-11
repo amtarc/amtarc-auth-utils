@@ -32,7 +32,7 @@ describe('validateSession', () => {
   it('should reject idle session when idle timeout is exceeded', () => {
     const idleTimeout = 1000 * 60 * 30; // 30 minutes
     const session = createMockSession({
-      lastActivityAt: new Date(Date.now() - idleTimeout - 1000), // 31 minutes ago
+      lastActiveAt: new Date(Date.now() - idleTimeout - 1000), // 31 minutes ago
     });
     const result = validateSession(session, { idleTimeout });
 

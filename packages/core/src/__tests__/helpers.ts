@@ -12,7 +12,7 @@ export function createMockSession<TUser extends User = User>(
     userId: 'test-user-id',
     expiresAt: new Date(now.getTime() + 1000 * 60 * 60), // 1 hour
     createdAt: now,
-    lastActivityAt: now,
+    lastActiveAt: now,
     ...overrides,
   };
 }

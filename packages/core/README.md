@@ -1,81 +1,190 @@
 # @amtarc/auth-utils
 
-> Core authentication and session management utilities
+> Enterprise-grade authentication utilities with session management, guards, secure cookies, and comprehensive error handling
+
+[![npm version](https://img.shields.io/npm/v/@amtarc/auth-utils.svg)](https://www.npmjs.com/package/@amtarc/auth-utils)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Installation
 
 ```bash
+npm install @amtarc/auth-utils
+# or
 pnpm add @amtarc/auth-utils
+# or
+yarn add @amtarc/auth-utils
 ```
 
 ## Features
 
-- ✅ Session creation and validation
-- ✅ Session guards and middleware
-- ✅ Framework-agnostic design
-- ✅ TypeScript-first with full type safety
-- ✅ Zero runtime dependencies
+### Session Management
+- Session creation, validation, and refresh
+- Multi-device session support
+- Session fingerprinting for device tracking
+- Storage adapter pattern (Memory, custom adapters)
+- Session ID rotation for security
+- Concurrent session limits
+
+### Guards & Route Protection
+- Authentication guards (`requireAuth`, `requireGuest`)
+- Composable guard system (`requireAny`, `requireAll`)
+- Redirect management with open redirect prevention
+- Framework-agnostic design
+
+### Cookie Management
+- Secure cookie creation and parsing (RFC 6265)
+- HMAC cookie signing (SHA-256)
+- AES-256-GCM cookie encryption
+- Cookie rotation and deletion
+- Secure defaults (HttpOnly, Secure, SameSite)
+
+### Error Handling
+- 17+ specialized error classes
+- HTTP status code mapping
+- Type guards for error classification
+- JSON serialization for API responses
+- Operational vs programmer error distinction
+
+### Developer Experience
+- Full TypeScript support with generics
+- Tree-shakeable modular exports
+- Zero runtime dependencies
+- Framework-agnostic
+- Comprehensive JSDoc documentation
 
 ## Quick Start
 
 ```typescript
-import { createSession, validateSession, requireSession } from '@amtarc/auth-utils';
+import { createSession, requireAuth } from '@amtarc/auth-utils';
+import { createCookie, signCookie } from '@amtarc/auth-utils/cookies';
+import { UnauthenticatedError } from '@amtarc/auth-utils/errors';
 
-// Create a session
+// Create and sign a session
 const session = createSession('user-123', {
   expiresIn: 1000 * 60 * 60 * 24, // 24 hours
   idleTimeout: 1000 * 60 * 30, // 30 minutes
 });
 
-// Validate a session
-const validation = validateSession(session);
-if (!validation.valid) {
-  console.error('Session invalid:', validation.reason);
-}
+const sessionCookie = signCookie(
+  createCookie('session', session.sessionId, {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'strict',
+  }),
+  'your-secret-key'
+);
 
-// Use as a guard
-const getSession = () => getCurrentSession(); // Your session retrieval logic
-const guard = requireSession(getSession);
-
-const handler = guard(async (session) => {
-  return { userId: session.userId };
+// Protect routes with guards
+const handler = requireAuth((context) => {
+  return context.session;
 });
 ```
 
-## API Reference
+## Modular Imports
 
-### `createSession(userId, options)`
+The package provides tree-shakeable exports:
 
-Creates a new session for a user.
+```typescript
+// Main entry (all features)
+import { createSession, requireAuth, createCookie } from '@amtarc/auth-utils';
 
-**Parameters:**
-- `userId` (string): The user ID
-- `options` (SessionOptions): Configuration options
-  - `expiresIn` (number): Session lifetime in milliseconds (default: 7 days)
-  - `idleTimeout` (number): Idle timeout in milliseconds
-  - `fingerprint` (boolean): Enable session fingerprinting
+// Session management only
+import { 
+  createSession,
+  validateSession,
+  refreshSession,
+  invalidateSession
+} from '@amtarc/auth-utils/session';
 
-**Returns:** `Session<TUser>`
+// Guards only
+import { requireAuth, requireGuest, requireAny } from '@amtarc/auth-utils/guards';
 
-### `validateSession(session, options)`
+// Cookies only
+import { createCookie, signCookie, encryptCookie } from '@amtarc/auth-utils/cookies';
 
-Validates a session against expiration and idle timeout rules.
+// Errors only
+import { UnauthenticatedError, SessionExpiredError } from '@amtarc/auth-utils/errors';
+```
 
-**Parameters:**
-- `session` (Session): The session to validate
-- `options` (SessionOptions): Validation options
+## API Documentation
 
-**Returns:** `ValidationResult`
+For complete API reference with all methods, parameters, and examples, see our [full documentation](https://amtarc-auth-utils.dev).
 
-### `requireSession(getSession, options)`
+### Quick Reference
 
-Creates a guard that requires a valid session.
+**Session Management:**
+- `createSession()` - Create sessions with secure IDs
+- `validateSession()` - Validate expiration and idle timeout
+- `refreshSession()` - Update timestamps and rotate IDs
+- `invalidateSession()` - End sessions
+- `MemoryStorageAdapter` - In-memory session storage
+- `listUserSessions()` - Multi-device session management
+- `generateSessionFingerprint()` - Device tracking
 
-**Parameters:**
-- `getSession` (() => Session | Promise<Session | null>): Function to retrieve session
-- `options` (SessionOptions): Session validation options
+**Guards & Protection:**
+- `requireAuth()` - Require authenticated users
+- `requireGuest()` - Require unauthenticated users
+- `requireAny()` / `requireAll()` - Composable guards
+- `isValidRedirect()` - Prevent open redirects
+- `saveAuthRedirect()` / `restoreAuthRedirect()` - Redirect flow
 
-**Returns:** Guard function
+**Cookie Management:**
+- `createCookie()` / `parseCookie()` - Cookie strings
+- `signCookie()` / `verifyCookie()` - HMAC signing
+- `encryptCookie()` / `decryptCookie()` - AES-256-GCM encryption
+- `deleteCookie()` / `rotateCookie()` - Cookie lifecycle
+
+**Error Handling:**
+- `AuthUtilsError` - Base error with HTTP status codes
+- `UnauthenticatedError`, `UnauthorizedError` - Auth errors (401/403)
+- `SessionExpiredError`, `SessionNotFoundError` - Session errors
+- `isAuthUtilsError()`, `getErrorStatusCode()` - Type guards
+- `serializeError()` - Safe JSON serialization
+
+## TypeScript Support
+
+Full TypeScript support with generics:
+
+```typescript
+interface UserData {
+  role: 'admin' | 'user';
+  permissions: string[];
+}
+
+const session = createSession<UserData>('user-123', {
+  data: {
+    role: 'admin',
+    permissions: ['read', 'write'],
+  },
+});
+
+// session.data is typed as UserData
+session.data.role; // 'admin' | 'user'
+```
+
+## Framework Integration
+
+Framework-agnostic with adapter examples for Express, Next.js, Fastify, and more. See [documentation](https://amtarc-auth-utils.dev/guide/frameworks) for details.
+
+## Bundle Size
+
+- **Main**: 2.01 KB
+- **Session**: 603 B  
+- **Guards**: 393 B
+- **Cookies**: 708 B
+- **Errors**: 686 B
+
+Total: ~4.4 KB (tree-shakeable)
+
+## Testing
+
+375 tests with >95% coverage:
+
+```bash
+pnpm test          # Run tests in watch mode
+pnpm test:run      # Run tests once
+pnpm test:coverage # Generate coverage report
+```
 
 ## License
 
