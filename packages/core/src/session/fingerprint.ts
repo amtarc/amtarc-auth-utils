@@ -220,8 +220,9 @@ function normalizeUserAgent(userAgent: string): string {
   if (!userAgent) return '';
 
   // Remove version numbers while keeping browser name
+  // Limit digit sequences to prevent ReDoS
   return userAgent
-    .replace(/\d+\.\d+(\.\d+)?/g, '') // Remove version numbers
+    .replace(/\d{1,10}\.\d{1,10}(?:\.\d{1,10})?/g, '') // Remove version numbers (max 3 segments, 10 digits each)
     .replace(/\s+/g, ' ') // Normalize whitespace
     .trim()
     .toLowerCase();
