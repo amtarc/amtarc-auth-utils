@@ -1,0 +1,68 @@
+{
+  "name": "@amtarc-auth-utils/core",
+  "version": "1.0.0",
+  "description": "Core authentication and session management utilities",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
+    },
+    "./session": {
+      "import": "./dist/session/index.js",
+      "require": "./dist/session/index.cjs",
+      "types": "./dist/session/index.d.ts"
+    },
+    "./guards": {
+      "import": "./dist/guards/index.js",
+      "require": "./dist/guards/index.cjs",
+      "types": "./dist/guards/index.d.ts"
+    },
+    "./cookies": {
+      "import": "./dist/cookies/index.js",
+      "require": "./dist/cookies/index.cjs",
+      "types": "./dist/cookies/index.d.ts"
+    },
+    "./errors": {
+      "import": "./dist/errors/index.js",
+      "require": "./dist/errors/index.cjs",
+      "types": "./dist/errors/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "authentication",
+    "session",
+    "security",
+    "typescript",
+    "guards"
+  ],
+  "author": "amtarc",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.11.17",
+    "@vitest/coverage-v8": "^1.3.1",
+    "tsup": "^8.0.2",
+    "typescript": "^5.3.3",
+    "vitest": "^1.3.1"
+  },
+  "peerDependencies": {
+    "typescript": ">=5.0.0"
+  }
+}

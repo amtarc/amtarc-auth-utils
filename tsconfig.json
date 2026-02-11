@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "./packages/tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@amtarc-auth-utils/core": ["./packages/core/src"],
+      "@amtarc-auth-utils/security": ["./packages/security/src"],
+      "@amtarc-auth-utils/authorization": ["./packages/authorization/src"],
+      "@amtarc-auth-utils/tokens": ["./packages/tokens/src"],
+      "@amtarc-auth-utils/multi-tenancy": ["./packages/multi-tenancy/src"],
+      "@amtarc-auth-utils/audit": ["./packages/audit/src"],
+      "@amtarc-auth-utils/testing": ["./packages/testing/src"],
+      "@amtarc-auth-utils/observability": ["./packages/observability/src"]
+    }
+  },
+  "files": [],
+  "references": [
+    { "path": "./packages/core" },
+    { "path": "./packages/security" },
+    { "path": "./packages/authorization" },
+    { "path": "./packages/tokens" },
+    { "path": "./packages/multi-tenancy" },
+    { "path": "./packages/audit" },
+    { "path": "./packages/testing" },
+    { "path": "./packages/observability" }
+  ]
+}
