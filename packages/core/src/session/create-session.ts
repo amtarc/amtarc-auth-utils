@@ -37,7 +37,7 @@ export function createSession<TUser extends User = User>(
     userId,
     expiresAt: new Date(now.getTime() + expiresIn),
     createdAt: now,
-    lastActivityAt: now,
+    lastActiveAt: now,
   };
 
   if (options.fingerprint) {

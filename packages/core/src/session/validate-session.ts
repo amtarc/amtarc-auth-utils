@@ -44,8 +44,8 @@ export function validateSession<TUser extends User = User>(
   }
 
   // Check idle timeout
-  if (options.idleTimeout && session.lastActivityAt) {
-    const idleTime = now.getTime() - session.lastActivityAt.getTime();
+  if (options.idleTimeout && session.lastActiveAt) {
+    const idleTime = now.getTime() - session.lastActiveAt.getTime();
     if (idleTime > options.idleTimeout) {
       return { valid: false, reason: 'idle-timeout' };
     }
