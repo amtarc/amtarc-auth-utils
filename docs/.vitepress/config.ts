@@ -33,17 +33,15 @@ export default defineConfig({
           items: [
             { text: 'Session Management', link: '/guide/sessions' },
             { text: 'Guards & Middleware', link: '/guide/guards' },
+            { text: 'Cookies', link: '/guide/cookies' },
             { text: 'Error Handling', link: '/guide/errors' },
           ],
         },
       ],
       '/api/': [
         {
-          text: 'Packages',
-          items: [
-            { text: '@amtarc/auth-utils', link: '/api/core' },
-            { text: '@amtarc/auth-utils-security', link: '/api/security' },
-          ],
+          text: 'API Reference',
+          items: [{ text: 'Core Package', link: '/api/core' }],
         },
       ],
     },

@@ -13,28 +13,22 @@ hero:
       link: https://github.com/amtarc/amtarc-auth-utils
 
 features:
-  - icon: 🔐
-    title: Advanced Session Management
+  - title: Advanced Session Management
     details: Multi-device sessions, fingerprinting, storage adapters, and automatic rotation
   
-  - icon: 🛡️
-    title: Route Protection Guards
+  - title: Route Protection Guards
     details: Composable authentication guards with redirect management and open redirect prevention
   
-  - icon: 🍪
-    title: Secure Cookie Utilities
+  - title: Secure Cookie Utilities
     details: RFC 6265 compliant with HMAC signing and AES-256-GCM encryption
   
-  - icon: ⚠️
-    title: Enterprise Error Handling
+  - title: Enterprise Error Handling
     details: 17+ specialized errors with HTTP status codes and type guards
   
-  - icon: 📦
-    title: Tree-Shakeable Modules
+  - title: Tree-Shakeable Modules
     details: Import only what you need - ~4.4KB total, fully modular
   
-  - icon: 🎯
-    title: Type-Safe & Framework Agnostic
+  - title: Type-Safe & Framework Agnostic
     details: Full TypeScript support, works with Express, Next.js, Fastify, and more
 ---
 
@@ -46,7 +40,7 @@ npm install @amtarc/auth-utils
 
 ```typescript
 import { createSession, requireAuth } from '@amtarc/auth-utils';
-import { createCookie, signCookie } from '@amtarc/auth-utils/cookies';
+import { createAuthCookie, signCookie } from '@amtarc/auth-utils/cookies';
 import { MemoryStorageAdapter } from '@amtarc/auth-utils/session';
 
 // Setup storage
@@ -61,7 +55,7 @@ await storage.set(session.sessionId, session);
 
 // Create signed cookie
 const cookie = signCookie(
-  createCookie('session', session.sessionId, {
+  createAuthCookie('session', session.sessionId, {
     httpOnly: true,
     secure: true,
     sameSite: 'strict',
@@ -77,7 +71,7 @@ const handler = requireAuth(async (context) => {
 
 ## What's New in v1.1.0
 
-### 🚀 Major Features
+### Major Features
 
 **Session Management:**
 - Multi-device session support with tracking and limits
@@ -102,7 +96,7 @@ const handler = requireAuth(async (context) => {
 - Type guards for error classification
 - JSON serialization for APIs
 
-### 📊 Stats
+### Stats
 
 - **375 tests** passing (100% pass rate)
 - **>95% coverage** across all modules
@@ -121,13 +115,13 @@ Unlike full authentication frameworks, `@amtarc/auth-utils` provides **focused u
 - Adding advanced session features
 
 **Key Advantages:**
-- ✅ Truly framework-agnostic
-- ✅ Minimal bundle size (~4.4KB vs 50KB+)
-- ✅ Tree-shakeable modular exports
-- ✅ Multi-device session support built-in
-- ✅ Session fingerprinting included
-- ✅ Cookie encryption out of the box
-- ✅ Enterprise-grade error handling
+- Truly framework-agnostic
+- Minimal bundle size (~4.4KB vs 50KB+)
+- Tree-shakeable modular exports
+- Multi-device session support built-in
+- Session fingerprinting included
+- Cookie encryption out of the box
+- Enterprise-grade error handling
 
 ## Modular Design
 

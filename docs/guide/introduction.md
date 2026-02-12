@@ -2,53 +2,54 @@
 
 ## What is @amtarc/auth-utils?
 
-`@amtarc/auth-utils` is an **enterprise-grade TypeScript library** that provides comprehensive authentication and authorization utilities for production applications.
-
-Unlike full authentication frameworks, `@amtarc/auth-utils` focuses on solving the complex, recurring patterns that enterprises face but aren't solved by standard auth providers.
+`@amtarc/auth-utils` is a **production-ready TypeScript library** that provides comprehensive authentication utilities for modern applications. It focuses on solving the complex, recurring patterns that aren't covered by standard authentication providers.
 
 ## The Problem We Solve
 
-Modern authentication frameworks like Auth.js, Better Auth, and Clerk do an excellent job of handling core authentication flows (OAuth, credentials, magic links, etc.). However, production applications need much more:
+Modern authentication frameworks like Auth.js, Better Auth, and Clerk handle core authentication flows well (OAuth, credentials, magic links). However, production applications need additional utilities:
 
-- **Session Management**: Multi-device sessions, session fingerprinting, concurrent session limits
-- **Authorization**: RBAC, ABAC, resource-based permissions with policy evaluation
-- **Security**: CSRF protection, rate limiting, security headers, brute-force prevention
-- **Multi-Tenancy**: Tenant isolation, context management, cross-tenant prevention
-- **Compliance**: Audit logging for GDPR, SOC 2, and other regulations
-- **Observability**: Metrics, tracing, and structured logging for production monitoring
+- **Session Management**: Multi-device sessions, fingerprinting, storage adapters, refresh & rotation
+- **Route Protection**: Authentication guards with redirect handling and composable logic
+- **Cookie Security**: RFC 6265 compliant with HMAC signing and AES-256-GCM encryption
+- **Error Handling**: Specialized errors with HTTP status codes and type guards for consistent error handling
 
-Building these features from scratch is time-consuming and error-prone. `@amtarc/auth-utils` provides battle-tested implementations that you can integrate into any TypeScript application.
+`@amtarc/auth-utils` provides battle-tested implementations of these utilities that integrate with any TypeScript application.
 
 ## Design Philosophy
 
 ### 1. Framework-Agnostic Core
 
-All core functionality works independently of any framework. Optional adapters provide convenience for popular frameworks like Express, Next.js, and Fastify.
+All core functionality works independently of any framework. Use with Express, Next.js, Fastify, Hono, or any other framework.
 
 ### 2. Modular Architecture
 
-Import only what you need. Every feature is tree-shakable to minimize bundle size.
+Import only what you need. Every feature is tree-shakable to minimize bundle size (~4.4KB total).
 
 ```typescript
-// Import only session management
-import { createSession, validateSession } from '@amtarc/auth-utils/session';
+// Import specific modules
+import { createSession } from '@amtarc/auth-utils/session';
+import { requireAuth } from '@amtarc/auth-utils/guards';
+import { signCookie } from '@amtarc/auth-utils/cookies';
+import { UnauthenticatedError } from '@amtarc/auth-utils/errors';
 
-// Or import everything
-import * as auth from '@amtarc/auth-utils';
+// Or use main exports
+import { createSession, requireAuth } from '@amtarc/auth-utils';
 ```
 
 ### 3. Type-Safe by Default
 
-Built with TypeScript's strictest settings. Generic types allow you to extend with your own user and session types.
+Built with TypeScript's strictest settings. Generic types allow you to extend with your own data types.
 
 ```typescript
-interface MyUser extends User {
+interface UserData {
   email: string;
   roles: string[];
 }
 
-const session = createSession<MyUser>('user-123');
-// session.user is typed as MyUser | undefined
+const session = createSession<UserData>('user-123', {
+  data: { email: 'user@example.com', roles: ['admin'] }
+});
+// session.data is typed as UserData
 ```
 
 ### 4. Security-First
@@ -57,48 +58,79 @@ Safe defaults, explicit overrides. All security-sensitive features require consc
 
 ### 5. Production-Ready
 
-Features like caching, performance monitoring, and graceful error handling are built-in, not afterthoughts.
+Features like automatic session rotation, device fingerprinting, and comprehensive error handling are built-in.
 
-## Core Packages
+## Core Features
 
-### @amtarc/auth-utils
+### Session Management
 
-Session management, guards, cookie utilities, and error handling.
+Complete session lifecycle management with multi-device support:
 
-**Use for:** Session lifecycle, route protection, session validation
+- Session creation with configurable expiration
+- Idle timeout and absolute timeout support
+- Session refresh and ID rotation
+- Multi-device session tracking with limits
+- Session fingerprinting for device identification
+- Storage adapters (Memory included, custom supported)
+- Session invalidation (single device or all devices)
 
-### @amtarc/auth-utils-security
+### Guards & Route Protection
 
-CSRF protection, rate limiting, security headers, and encryption helpers.
+Protect routes with composable guards:
 
-**Use for:** API security, brute-force prevention, compliance requirements
+- `requireAuth` - Require authenticated users
+- `requireGuest` - Require unauthenticated users  
+- `requireAny` - OR logic for multiple guards
+- `requireAll` - AND logic for multiple guards
+- `chainGuards` - Sequential guard execution
+- `allowAll` - Always allow (for public routes)
+- `conditionalGuard` - Dynamic guard selection
+- Redirect management with open redirect prevention
 
-### @amtarc/auth-utils-authorization
+### Cookie Utilities
 
-RBAC, ABAC, resource permissions, and policy evaluation.
+Secure cookie creation and management:
 
-**Use for:** Complex permission systems, multi-role applications
+- RFC 6265 compliant cookie creation/parsing
+- HMAC-SHA256 signature signing and verification
+- AES-256-GCM encryption and decryption
+- Cookie rotation with single-use guarantees
+- Secure deletion with past expiration
+- Validation for cookie names, values, domains, paths
 
-### @amtarc/auth-utils-tokens
+### Error Handling
 
-JWT utilities, token validation, and refresh token patterns.
+Comprehensive error system with 17+ error types:
 
-**Use for:** Token-based authentication, API key management
+- **Authentication Errors**: `UnauthenticatedError`, `InvalidCredentialsError`
+- **Session Errors**: `SessionExpiredError`, `SessionRevokedError`, `ConcurrentSessionError`
+- **Cookie Errors**: `InvalidCookieError`, `CookieSignatureMismatchError`
+- **Validation Errors**: `ValidationError` with field details
+- **Token Errors**: `InvalidTokenError`, `TokenExpiredError`
+- HTTP status code mapping for API responses
+- Type guards for error classification
+- JSON serialization support
 
-### @amtarc/auth-utils-multi-tenancy
+## What's Included (v1.1.0)
 
-Tenant context, isolation, and switching.
+The current release includes:
 
-**Use for:** SaaS applications, multi-customer platforms
+**@amtarc/auth-utils** (Core Package)
+- Session management with multi-device support
+- Authentication guards with composition
+- Cookie utilities with security features
+- Comprehensive error handling
 
-### @amtarc/auth-utils-audit
-
-Audit logging, compliance helpers, and security event tracking.
-
-**Use for:** GDPR compliance, SOC 2 audits, security monitoring
+**Bundle Size**: ~4.4KB total (tree-shakeable)  
+**Test Coverage**: 375 tests, >95% coverage  
+**Dependencies**: Zero (Node.js built-ins only)
 
 ## Next Steps
 
-- [Installation →](/guide/installation)
-- [Quick Start →](/guide/quick-start)
-- [API Reference →](/api/)
+- [Installation](/guide/installation) - Get started with installation
+- [Quick Start](/guide/quick-start) - Build your first protected route
+- [Session Management](/guide/sessions) - Deep dive into sessions
+- [Guards](/guide/guards) - Learn about route protection
+- [Cookies](/guide/cookies) - Secure cookie handling
+- [Error Handling](/guide/errors) - Handle errors properly
+
