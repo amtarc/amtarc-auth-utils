@@ -46,6 +46,10 @@ export class MemoryCSRFStorage implements CSRFStorageAdapter {
     this.cleanupInterval = setInterval(() => {
       this.cleanup();
     }, cleanupIntervalMs);
+    // Avoid keeping the Node.js process alive solely because of this interval
+    if (this.cleanupInterval.unref) {
+      this.cleanupInterval.unref();
+    }
   }
 
   async set(key: string, token: string, ttl?: number): Promise<void> {

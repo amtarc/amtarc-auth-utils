@@ -52,24 +52,33 @@ export async function validateCSRFToken(
 
   // Check if timestamped token (format: timestamp.expiresAt.token)
   if (token.includes('.') && token.split('.').length === 3) {
-    const timestampResult = validateTimestampedToken(token);
-    if (!timestampResult.valid) {
+    // For timestamped tokens, first verify the full token matches the stored value
+    // Handle potential length difference to avoid timingSafeEqual throwing
+    if (token.length !== storedToken.length) {
       if (strict) {
-        throw new CSRFError(`CSRF token ${timestampResult.reason}`);
+        throw new CSRFError('CSRF token mismatch');
       }
-      return timestampResult;
+      return { valid: false, reason: 'mismatch' };
     }
-    // Extract actual token from timestamped format
-    const actualToken = token.split('.')[2] || '';
+    // Constant-time comparison of the full token to prevent timing attacks
     const isValid = crypto.timingSafeEqual(
-      Buffer.from(actualToken),
-      Buffer.from(storedToken.split('.')[2] || '')
+      Buffer.from(token),
+      Buffer.from(storedToken)
     );
     if (!isValid) {
       if (strict) {
         throw new CSRFError('CSRF token mismatch');
       }
       return { valid: false, reason: 'mismatch' };
+    }
+    // Now that we know the submitted token matches the stored token,
+    // validate the timestamped format/expiry using the stored token.
+    const timestampResult = validateTimestampedToken(storedToken);
+    if (!timestampResult.valid) {
+      if (strict) {
+        throw new CSRFError(`CSRF token ${timestampResult.reason}`);
+      }
+      return timestampResult;
     }
   } else {
     // Handle potential length difference

@@ -122,15 +122,15 @@ export function verifyCookieSignature(
  * res.setHeader('Set-Cookie', cookie);
  * ```
  */
-export function signAndCreateCookie(
+export async function signAndCreateCookie(
   name: string,
   value: string,
   secret: string,
   options?: CookieOptions
-): string {
+): Promise<string> {
   const signed = signCookie(value, secret);
-  // Import dynamically to avoid circular dependency
-  const { createAuthCookie } = require('./create-cookie');
+  // Dynamic import for ESM compatibility
+  const { createAuthCookie } = await import('./create-cookie');
   return createAuthCookie(name, signed, options);
 }
 

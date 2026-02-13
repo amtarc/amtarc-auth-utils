@@ -98,6 +98,18 @@ export async function validateSynchronizerToken(
 }
 
 /**
+ * Escape HTML attribute value
+ */
+function escapeAttribute(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+/**
  * Attach CSRF token to response
  * Helper to set token in meta tag or hidden form field
  */
@@ -107,9 +119,13 @@ export function attachCSRFTokenToHTML(
 ): string {
   const { method = 'meta', name = 'csrf-token' } = options;
 
+  // Escape to prevent XSS via quote-breaking
+  const escapedName = escapeAttribute(name);
+  const escapedToken = escapeAttribute(token);
+
   if (method === 'meta') {
-    return `<meta name="${name}" content="${token}">`;
+    return `<meta name="${escapedName}" content="${escapedToken}">`;
   } else {
-    return `<input type="hidden" name="${name}" value="${token}">`;
+    return `<input type="hidden" name="${escapedName}" value="${escapedToken}">`;
   }
 }

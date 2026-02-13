@@ -41,6 +41,10 @@ export class UniversalMemoryStorage implements CounterStorage {
     this.cleanupInterval = setInterval(() => {
       this.cleanup();
     }, cleanupIntervalMs);
+    // Avoid keeping the Node.js process alive solely because of this interval
+    if (this.cleanupInterval.unref) {
+      this.cleanupInterval.unref();
+    }
   }
 
   // ============================================================================

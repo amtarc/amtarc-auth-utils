@@ -15,6 +15,10 @@ export class MemoryRateLimitStorage implements RateLimitStorage {
     this.cleanupInterval = setInterval(() => {
       this.cleanup();
     }, cleanupIntervalMs);
+    // Avoid keeping the Node.js process alive solely because of this interval
+    if (this.cleanupInterval.unref) {
+      this.cleanupInterval.unref();
+    }
   }
 
   async get(key: string): Promise<unknown> {

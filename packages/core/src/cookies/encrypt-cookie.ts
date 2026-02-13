@@ -128,14 +128,15 @@ export function verifyEncryptedCookie(
  * res.setHeader('Set-Cookie', cookie);
  * ```
  */
-export function encryptAndCreateCookie(
+export async function encryptAndCreateCookie(
   name: string,
   value: string,
   secret: string,
   options?: CookieOptions
-): string {
+): Promise<string> {
   const encrypted = encryptCookie(value, secret);
-  const { createAuthCookie } = require('./create-cookie');
+  // Dynamic import for ESM compatibility
+  const { createAuthCookie } = await import('./create-cookie');
   return createAuthCookie(name, encrypted, options);
 }
 
