@@ -17,8 +17,8 @@
 
 ## Packages
 
-### Core Package ( v1.1.0 - Available)
-**[`@amtarc/auth-utils`](./packages/core)** - Complete authentication utilities
+### Core Package (v1.2.0 - Available)
+**[`@amtarc/auth-utils`](./packages/core)** - Complete authentication and security utilities
 
 **Session Management:**
 - Session creation, validation, and refresh
@@ -41,14 +41,22 @@
 - Cookie rotation and deletion utilities
 - Secure defaults (HttpOnly, Secure, SameSite)
 
+**Security (Phase 3 - v1.2.0):**
+- CSRF protection (double-submit & synchronizer patterns)
+- Rate limiting (token bucket, fixed window, sliding window algorithms)
+- Brute-force protection with progressive delays and lockout
+- Security headers builder (CSP, HSTS, CORS, etc.)
+- AES-256-GCM encryption with key derivation (PBKDF2/Scrypt)
+- Secure random generation (tokens, UUIDs, strings)
+- Universal storage adapter for all modules
+
 **Error Handling:**
 - 17+ specialized error classes with HTTP status codes
 - Type guards for error classification
 - JSON serialization for API responses
 - Operational vs programmer error distinction
 
-### Future Packages ( In Development)
-- [`@amtarc/auth-utils-security`](./packages/security) - CSRF, rate limiting, and security headers
+### Future Packages (In Development)
 - [`@amtarc/auth-utils-authorization`](./packages/authorization) - RBAC, ABAC, and permission systems
 - [`@amtarc/auth-utils-tokens`](./packages/tokens) - JWT utilities and token management
 - [`@amtarc/auth-utils-multi-tenancy`](./packages/multi-tenancy) - Multi-tenant utilities
@@ -65,8 +73,9 @@ pnpm add @amtarc/auth-utils
 ```
 
 ```typescript
-import { createSession, requireAuth } from '@amtarc/auth-utils';
-import { createCookie, signCookie } from '@amtarc/auth-utils/cookies';
+import { createSession } from '@amtarc/auth-utils';
+import { requireAuth } from '@amtarc/auth-utils/guards';
+import { createAuthCookie, signCookie } from '@amtarc/auth-utils/cookies';
 import { MemoryStorageAdapter } from '@amtarc/auth-utils/session';
 
 // Setup storage
@@ -82,19 +91,24 @@ const session = createSession('user-123', {
 await storage.set(session.sessionId, session);
 
 // Create signed cookie
-const cookie = signCookie(
-  createCookie('session', session.sessionId, {
-    httpOnly: true,
-    secure: true,
-    sameSite: 'strict',
-  }),
-  'your-secret-key'
-);
+const signedValue = signCookie(session.sessionId, 'your-secret-key');
+const cookie = createAuthCookie('session', signedValue, {
+  httpOnly: true,
+  secure: true,
+  sameSite: 'strict',
+});
 
 // Protect a route (framework-agnostic)
-const handler = requireAuth(async (context) => {
-  return { user: context.session.userId };
+const guard = requireAuth();
+const result = guard({
+  session,
+  request: { url: '/dashboard' },
+  response: {},
 });
+
+if (result.authorized) {
+  console.log('User:', session.userId);
+}
 ```
 
 ## Documentation
@@ -111,11 +125,14 @@ Visit [https://amtarc-auth-utils.dev](https://amtarc-auth-utils.dev) for full do
 
 Unlike full authentication frameworks, `@amtarc/auth-utils` provides **focused utilities** that complement your existing auth solution:
 
-| Feature | @amtarc/auth-utils | Auth Frameworks |
-|---------|-------------------|-----------------|
-| **Purpose** | Utilities & helpers | Complete auth flow |
+| Feature | @amtarc/auth-utils | Full Auth Frameworks |
+|---------|-------------------|---------------------|
+| **Purpose** | Security utilities | Complete auth flow |
 | **Flexibility** | Mix & match modules | All-in-one solution |
-| **Bundle Size** | ~4.4KB (tree-shakeable) | Often 50KB+ |
+| **Bundle Size** | ~10.6KB (tree-shakeable) | Often 50KB+ |
+| **CSRF Protection** | ✅ Built-in | Varies |
+| **Rate Limiting** | ✅ 4 algorithms | Often missing |
+| **Encryption** | ✅ AES-256-GCM | Varies |
 | **Framework Support** | Truly agnostic | Framework-specific |
 | **Multi-device Sessions** | Built-in | Often missing |
 | **Session Fingerprinting** | Built-in | Often missing |
@@ -142,7 +159,7 @@ pnpm install
 # Build all packages
 pnpm build
 
-# Run tests (375 tests, >95% coverage)
+# Run tests (400+ tests, >95% coverage)
 pnpm test
 
 # Run linting
@@ -154,12 +171,17 @@ pnpm lint
 ```
 @amtarc/auth-utils/
 ├── packages/
-│   ├── core/                   # Core utilities (v1.1.0)
+│   ├── core/                   # Core utilities (v1.2.0)
 │   │   ├── session/           # Session management
 │   │   ├── guards/            # Route protection
 │   │   ├── cookies/           # Cookie utilities
-│   │   └── errors/            # Error handling
-│   ├── security/              # Coming soon
+│   │   ├── errors/            # Error handling
+│   │   ├── security/          # CSRF, rate limiting, headers, encryption
+│   │   │   ├── csrf/          # CSRF protection
+│   │   │   ├── rate-limit/    # Rate limiting algorithms
+│   │   │   ├── headers/       # Security headers
+│   │   │   └── encryption/    # AES-256-GCM encryption
+│   │   └── storage/           # Universal storage adapter
 │   ├── authorization/         # Coming soon
 │   ├── tokens/               # Coming soon
 │   └── ...
@@ -173,13 +195,13 @@ pnpm lint
 
 ## Stats
 
-**Core Package (v1.1.0):**
-- Bundle Size: ~4.4 KB (gzipped, tree-shakeable)
-- Tests: 375 passing (100% pass rate)
+**Core Package (v1.2.0):**
+- Bundle Size: ~10.6 KB (gzipped, tree-shakeable)
+- Tests: 400+ passing (100% pass rate)
 - Coverage: >95%
 - TypeScript: Strict mode + exactOptionalPropertyTypes
-- Build Time: <400ms
-- Zero runtime dependencies
+- Build Time: <500ms
+- Zero runtime dependencies (Node.js crypto only)
 
 ## Contributing
 
