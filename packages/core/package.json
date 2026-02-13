@@ -1,6 +1,6 @@
 {
   "name": "@amtarc/auth-utils",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Enterprise-grade authentication utilities with session management, guards, secure cookies, and comprehensive error handling",
   "type": "module",
   "exports": {
@@ -28,6 +28,36 @@
       "types": "./dist/errors/index.d.ts",
       "import": "./dist/errors/index.js",
       "require": "./dist/errors/index.cjs"
+    },
+    "./security": {
+      "types": "./dist/security/index.d.ts",
+      "import": "./dist/security/index.js",
+      "require": "./dist/security/index.cjs"
+    },
+    "./security/csrf": {
+      "types": "./dist/security/csrf/index.d.ts",
+      "import": "./dist/security/csrf/index.js",
+      "require": "./dist/security/csrf/index.cjs"
+    },
+    "./security/rate-limit": {
+      "types": "./dist/security/rate-limit/index.d.ts",
+      "import": "./dist/security/rate-limit/index.js",
+      "require": "./dist/security/rate-limit/index.cjs"
+    },
+    "./security/headers": {
+      "types": "./dist/security/headers/index.d.ts",
+      "import": "./dist/security/headers/index.js",
+      "require": "./dist/security/headers/index.cjs"
+    },
+    "./security/encryption": {
+      "types": "./dist/security/encryption/index.d.ts",
+      "import": "./dist/security/encryption/index.js",
+      "require": "./dist/security/encryption/index.cjs"
+    },
+    "./storage": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
     }
   },
   "files": [
@@ -55,6 +85,13 @@
     "guards",
     "cookies",
     "csrf",
+    "rate-limiting",
+    "brute-force-protection",
+    "security-headers",
+    "csp",
+    "encryption",
+    "aes-256-gcm",
+    "key-derivation",
     "fingerprinting",
     "multi-device",
     "typescript",

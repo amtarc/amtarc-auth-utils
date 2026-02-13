@@ -11,7 +11,7 @@ export default defineConfig({
 
     nav: [
       { text: 'Guide', link: '/guide/introduction' },
-      { text: 'API Reference', link: '/api/' },
+      { text: 'API Reference', link: '/api/core' },
       {
         text: 'GitHub',
         link: 'https://github.com/amtarc/amtarc-auth-utils',
@@ -35,6 +35,13 @@ export default defineConfig({
             { text: 'Guards & Middleware', link: '/guide/guards' },
             { text: 'Cookies', link: '/guide/cookies' },
             { text: 'Error Handling', link: '/guide/errors' },
+          ],
+        },
+        {
+          text: 'Advanced Features',
+          items: [
+            { text: 'Security Features', link: '/guide/security' },
+            { text: 'Storage & Integration', link: '/guide/storage' },
           ],
         },
       ],

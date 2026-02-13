@@ -9,5 +9,7 @@ export * from './session';
 export * from './guards';
 export * from './cookies';
 export * from './errors';
+export * from './security';
+export * from './storage';
 
-export const VERSION = '1.0.0';
+export const VERSION = '1.2.0';
