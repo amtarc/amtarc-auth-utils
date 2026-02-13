@@ -5,6 +5,14 @@ All notable changes to `@amtarc/auth-utils` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2026-02-14
+
+### Changed
+- Updated README documentation to reflect Phase 3 features and improvements
+- Updated bundle size information (10.63 KB with all Phase 3 features)
+- Improved API examples with correct function names and usage patterns
+- Added comprehensive Phase 3 API reference (CSRF, rate limiting, encryption, headers)
+
 ## [1.2.0] - 2026-02-13
 
 ### Added

@@ -1,6 +1,6 @@
 {
   "name": "@amtarc/auth-utils",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Enterprise-grade authentication utilities with session management, guards, secure cookies, and comprehensive error handling",
   "type": "module",
   "exports": {
