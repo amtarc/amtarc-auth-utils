@@ -55,29 +55,36 @@ yarn add @amtarc/auth-utils
 ## Quick Start
 
 ```typescript
-import { createSession, requireAuth } from '@amtarc/auth-utils';
-import { createCookie, signCookie } from '@amtarc/auth-utils/cookies';
+import { createSession } from '@amtarc/auth-utils';
+import { createAuthCookie, signCookie } from '@amtarc/auth-utils/cookies';
+import { requireAuth } from '@amtarc/auth-utils/guards';
 import { UnauthenticatedError } from '@amtarc/auth-utils/errors';
 
-// Create and sign a session
+// Create a session
 const session = createSession('user-123', {
   expiresIn: 1000 * 60 * 60 * 24, // 24 hours
   idleTimeout: 1000 * 60 * 30, // 30 minutes
 });
 
-const sessionCookie = signCookie(
-  createCookie('session', session.sessionId, {
-    httpOnly: true,
-    secure: true,
-    sameSite: 'strict',
-  }),
-  'your-secret-key'
-);
+// Create signed session cookie
+const signedValue = signCookie(session.sessionId, 'your-secret-key');
+const sessionCookie = createAuthCookie('session', signedValue, {
+  httpOnly: true,
+  secure: true,
+  sameSite: 'strict',
+});
 
 // Protect routes with guards
-const handler = requireAuth((context) => {
-  return context.session;
+const guard = requireAuth();
+const result = guard({
+  session,
+  request: { url: '/dashboard' },
+  response: {},
 });
+
+if (!result.authorized) {
+  throw new UnauthenticatedError('Please log in');
+}
 ```
 
 ## Modular Imports
@@ -86,7 +93,9 @@ The package provides tree-shakeable exports:
 
 ```typescript
 // Main entry (all features)
-import { createSession, requireAuth, createCookie } from '@amtarc/auth-utils';
+import { createSession } from '@amtarc/auth-utils';
+import { requireAuth } from '@amtarc/auth-utils/guards';
+import { createAuthCookie } from '@amtarc/auth-utils/cookies';
 
 // Session management only
 import { 
@@ -100,10 +109,13 @@ import {
 import { requireAuth, requireGuest, requireAny } from '@amtarc/auth-utils/guards';
 
 // Cookies only
-import { createCookie, signCookie, encryptCookie } from '@amtarc/auth-utils/cookies';
+import { createAuthCookie, signCookie, encryptCookie } from '@amtarc/auth-utils/cookies';
 
 // Errors only
 import { UnauthenticatedError, SessionExpiredError } from '@amtarc/auth-utils/errors';
+
+// Security (Phase 3)
+import { generateCSRFToken, createRateLimiter } from '@amtarc/auth-utils/security';
 ```
 
 ## API Documentation
@@ -129,7 +141,7 @@ For complete API reference with all methods, parameters, and examples, see our [
 - `saveAuthRedirect()` / `restoreAuthRedirect()` - Redirect flow
 
 **Cookie Management:**
-- `createCookie()` / `parseCookie()` - Cookie strings
+- `createAuthCookie()` / `parseAuthCookies()` - Cookie strings
 - `signCookie()` / `verifyCookie()` - HMAC signing
 - `encryptCookie()` / `decryptCookie()` - AES-256-GCM encryption
 - `deleteCookie()` / `rotateCookie()` - Cookie lifecycle

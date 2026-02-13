@@ -39,6 +39,25 @@ import {
   SessionExpiredError,
   isAuthUtilsError 
 } from '@amtarc/auth-utils/errors';
+
+// Storage Module (Phase 3)
+import {
+  UniversalMemoryStorage,
+  BaseStorage,
+  CounterStorage
+} from '@amtarc/auth-utils/storage';
+
+// Security Module (Phase 3)
+import {
+  generateCSRFToken,
+  validateSynchronizerToken,
+  createRateLimiter,
+  BruteForceProtection,
+  encrypt,
+  decrypt,
+  CSPBuilder,
+  createSecurityHeaders
+} from '@amtarc/auth-utils/security';
 ```
 
 ---
@@ -1335,14 +1354,6 @@ interface ResponseContext {
 
 ---
 
-## Next Steps
-
-- [Introduction](/guide/introduction) - Learn about the library
-- [Session Management Guide](/guide/sessions) - Complete session features
-- [Guards Guide](/guide/guards) - Route protection patterns
-- [Cookies Guide](/guide/cookies) - Secure cookie handling  
-- [Error Handling Guide](/guide/errors) - Error management
-
 ### createSession
 
 Create a new session for a user.
@@ -2083,9 +2094,909 @@ interface GuardContext<T = unknown> {
 type GuardResult<T = unknown> = unknown;
 ```
 
-## Next Steps
 
-- [Session Management Guide](/guide/sessions)
-- [Guards Guide](/guide/guards)
-- [Cookies Guide](/guide/cookies)
-- [Error Handling Guide](/guide/errors)
+---
+
+## Storage Module (Phase 3)
+
+### BaseStorage Interface
+
+Foundation interface for all storage adapters.
+
+```typescript
+interface BaseStorage {
+  get(key: string): Promise<unknown>;
+  set(key: string, value: unknown, ttl?: number): Promise<void>;
+  delete(key: string): Promise<void>;
+  exists(key: string): Promise<boolean>;
+}
+```
+
+**Methods:**
+- `get(key)`: Retrieve value by key, returns `null` if not found or expired
+- `set(key, value, ttl?)`: Store value with optional TTL in milliseconds
+- `delete(key)`: Remove value by key
+- `exists(key)`: Check if key exists and is not expired
+
+### CounterStorage Interface
+
+Extends BaseStorage with counter operations for rate limiting.
+
+```typescript
+interface CounterStorage extends BaseStorage {
+  increment(key: string, amount?: number): Promise<number>;
+  decrement(key: string, amount?: number): Promise<number>;
+}
+```
+
+**Methods:**
+- `increment(key, amount?)`: Increment counter, returns new value
+- `decrement(key, amount?)`: Decrement counter, returns new value
+
+### UniversalMemoryStorage Class
+
+Universal in-memory storage adapter for all modules (sessions, CSRF, rate limiting).
+
+```typescript
+class UniversalMemoryStorage implements CounterStorage {
+  constructor(options?: { cleanupIntervalMs?: number });
+  
+  // BaseStorage methods
+  get(key: string): Promise<unknown>;
+  set(key: string, value: unknown, ttl?: number | StorageOptions): Promise<void>;
+  delete(key: string): Promise<void>;
+  exists(key: string): Promise<boolean>;
+  
+  // CounterStorage methods
+  increment(key: string, amount?: number): Promise<number>;
+  decrement(key: string, amount?: number): Promise<number>;
+  
+  // Session-specific methods
+  touch(sessionId: string, ttl: number): Promise<void>;
+  getUserSessions(userId: string): Promise<string[]>;
+  deleteUserSessions(userId: string): Promise<void>;
+  cleanup(): Promise<number>;
+  
+  // Utility methods
+  size(): number;
+  clear(): void;
+  destroy(): void;
+}
+```
+
+**Constructor Options:**
+```typescript
+interface UniversalStorageOptions {
+  cleanupIntervalMs?: number; // Auto-cleanup interval (default: 60000)
+}
+```
+
+**Session-Specific Methods:**
+- `touch(sessionId, ttl)`: Update session expiration without changing data
+- `getUserSessions(userId)`: Get all session IDs for a user
+- `deleteUserSessions(userId)`: Delete all sessions for a user
+- `cleanup()`: Remove expired entries, returns count removed
+
+**Utility Methods:**
+- `size()`: Get total number of stored entries
+- `clear()`: Remove all data
+- `destroy()`: Stop cleanup interval and clear all data
+
+**Example:**
+```typescript
+import { UniversalMemoryStorage } from '@amtarc/auth-utils/storage';
+
+const storage = new UniversalMemoryStorage({
+  cleanupIntervalMs: 60000 // Cleanup every minute
+});
+
+// Use with sessions
+await storage.set('session:123', sessionData, 3600000); // 1 hour TTL
+
+// Use with CSRF
+await storage.set('csrf:abc', csrfToken, 1800000); // 30 min TTL
+
+// Use with rate limiting
+await storage.increment('ratelimit:user-123'); // Counter operations
+```
+
+---
+
+## CSRF Protection 
+
+### generateCSRFToken
+
+Generate a CSRF token.
+
+```typescript
+function generateCSRFToken(options?: CSRFTokenOptions): string
+
+interface CSRFTokenOptions {
+  length?: number;              // Token length in bytes (default: 32)
+  includeTimestamp?: boolean;   // Include timestamp (default: false)
+  lifetime?: number;            // Token lifetime in ms
+  charset?: 'base64' | 'hex' | 'alphanumeric'; // Character set
+}
+```
+
+**Example:**
+```typescript
+const token = generateCSRFToken({
+  length: 32,
+  includeTimestamp: true,
+  lifetime: 3600000
+});
+```
+
+### generateCSRFTokenPair
+
+Generate token pair for double-submit pattern.
+
+```typescript
+function generateCSRFTokenPair(options?: CSRFTokenOptions): {
+  token: string;
+  hashedToken: string;
+}
+```
+
+### hashCSRFToken
+
+Hash a CSRF token with SHA-256.
+
+```typescript
+function hashCSRFToken(token: string): string
+```
+
+### generateSynchronizerToken
+
+Generate and store CSRF token (synchronizer pattern).
+
+```typescript
+async function generateSynchronizerToken(
+  options: SynchronizerTokenOptions
+): Promise<SynchronizerTokenResult>
+
+interface SynchronizerTokenOptions {
+  session: Session;
+  storage: CSRFStorageAdapter;
+  regenerate?: 'per-request' | 'per-session' | 'never';
+  lifetime?: number; // Token lifetime in ms
+}
+
+interface SynchronizerTokenResult {
+  token: string;
+  sessionUpdated: boolean;
+}
+```
+
+### validateSynchronizerToken
+
+Validate CSRF token (synchronizer pattern).
+
+```typescript
+async function validateSynchronizerToken(
+  token: string,
+  options: {
+    session: Session;
+    storage: CSRFStorageAdapter;
+    deleteAfterUse?: boolean;
+    strict?: boolean;
+  }
+): Promise<{ valid: boolean; reason?: string }>
+```
+
+### generateDoubleSubmitToken
+
+Generate CSRF token for double-submit pattern.
+
+```typescript
+function generateDoubleSubmitToken(
+  options?: DoubleSubmitOptions
+): DoubleSubmitResult
+
+interface DoubleSubmitOptions {
+  session?: Session;
+  lifetime?: number;
+  includeSession?: boolean;
+}
+
+interface DoubleSubmitResult {
+  token: string;
+  hashedToken: string;
+}
+```
+
+### validateDoubleSubmitToken
+
+Validate double-submit CSRF token.
+
+```typescript
+async function validateDoubleSubmitToken(
+  token: string,
+  options: {
+    session?: Session;
+    cookieToken: string;
+    strict?: boolean;
+  }
+): Promise<{ valid: boolean; reason?: string }>
+```
+
+### validateCSRFToken
+
+Low-level CSRF token validation.
+
+```typescript
+async function validateCSRFToken(
+  token: string,
+  options: ValidateCSRFTokenOptions
+): Promise<CSRFValidationResult>
+
+interface ValidateCSRFTokenOptions {
+  storage: CSRFStorageAdapter;
+  key: string;
+  deleteAfterUse?: boolean;
+  strict?: boolean;
+}
+
+interface CSRFValidationResult {
+  valid: boolean;
+  reason?: 'missing' | 'invalid' | 'expired' | 'mismatch';
+}
+```
+
+### validateTimestampedToken
+
+Validate CSRF token with timestamp.
+
+```typescript
+function validateTimestampedToken(
+  token: string,
+  maxAge: number
+): { valid: boolean; age?: number; reason?: string }
+```
+
+### extractCSRFToken
+
+Extract CSRF token from request.
+
+```typescript
+function extractCSRFToken(
+  request: {
+    body?: Record<string, unknown>;
+    headers?: Record<string, unknown>;
+    query?: Record<string, unknown>;
+  },
+  options?: {
+    bodyField?: string;
+    headerName?: string;
+    queryField?: string;
+  }
+): string | null
+```
+
+### attachCSRFTokenToHTML
+
+Auto-inject CSRF tokens into HTML forms.
+
+```typescript
+function attachCSRFTokenToHTML(
+  html: string,
+  token: string,
+  options?: {
+    formAttribute?: string;
+    inputName?: string;
+  }
+): string
+```
+
+### CSRF Storage Adapters
+
+```typescript
+class MemoryCSRFStorage implements CSRFStorageAdapter {
+  async get(key: string): Promise<string | null>;
+  async set(key: string, token: string, ttl?: number): Promise<void>;
+  async delete(key: string): Promise<void>;
+  async exists(key: string): Promise<boolean>;
+}
+
+class SessionCSRFStorage implements CSRFStorageAdapter {
+  constructor(getSession: () => Session);
+  // Same interface as MemoryCSRFStorage
+}
+
+class SessionCSRFAdapter implements CSRFStorageAdapter {
+  constructor(sessionStorage: SessionStorageAdapter, sessionId: string);
+  // Stores CSRF tokens within session data
+}
+```
+
+---
+
+## Rate Limiting 
+
+### createRateLimiter
+
+Create a rate limiter with specified algorithm.
+
+```typescript
+function createRateLimiter(
+  options: RateLimitOptions
+): (key: string) => Promise<RateLimitResult>
+
+interface RateLimitOptions {
+  storage: RateLimitStorage;
+  max: number;                  // Max requests
+  window: number;               // Time window in ms
+  algorithm?: 'fixed-window' | 'sliding-window-counter' | 
+              'sliding-window-log' | 'token-bucket';
+  keyPrefix?: string;           // Key prefix (default: 'ratelimit')
+  capacity?: number;            // Token bucket capacity
+  refillRate?: number;          // Token bucket refill rate
+}
+
+interface RateLimitResult {
+  allowed: boolean;
+  limit: number;
+  remaining: number;
+  resetAt: number;
+  retryAfter?: number;
+}
+```
+
+**Example:**
+```typescript
+const limiter = createRateLimiter({
+  storage: new UniversalMemoryStorage(),
+  max: 100,
+  window: 60000, // 1 minute
+  algorithm: 'sliding-window-counter'
+});
+
+const result = await limiter('user-123');
+if (!result.allowed) {
+  throw new Error(`Rate limit exceeded. Retry in ${result.retryAfter}ms`);
+}
+```
+
+### checkRateLimit
+
+Convenience function to check rate limit.
+
+```typescript
+async function checkRateLimit(
+  key: string,
+  options: RateLimitOptions
+): Promise<RateLimitResult>
+```
+
+### fixedWindow
+
+Fixed window rate limiting algorithm.
+
+```typescript
+function fixedWindow(
+  key: string,
+  options: { storage: RateLimitStorage; max: number; window: number }
+): Promise<RateLimitResult>
+```
+
+### slidingWindowCounter
+
+Sliding window counter algorithm (recommended).
+
+```typescript
+function slidingWindowCounter(
+  key: string,
+  options: { storage: RateLimitStorage; max: number; window: number }
+): Promise<RateLimitResult>
+```
+
+### slidingWindowLog
+
+Sliding window log algorithm (most accurate).
+
+```typescript
+function slidingWindowLog(
+  key: string,
+  options: { storage: RateLimitStorage; max: number; window: number }
+): Promise<RateLimitResult>
+```
+
+### tokenBucket
+
+Token bucket algorithm (allows bursts).
+
+```typescript
+function tokenBucket(
+  key: string,
+  options: {
+    storage: RateLimitStorage;
+    capacity: number;
+    refillRate: number;
+    window: number;
+  }
+): Promise<RateLimitResult>
+```
+
+### BruteForceProtection
+
+Brute force attack protection with progressive delays.
+
+```typescript
+class BruteForceProtection {
+  constructor(options: BruteForceOptions);
+  
+  checkAttempt(key: string): Promise<BruteForceResult>;
+  recordFailedAttempt(key: string): Promise<BruteForceResult>;
+  recordSuccessfulAttempt(key: string): Promise<void>;
+  unlock(key: string): Promise<void>;
+}
+
+interface BruteForceOptions {
+  storage?: RateLimitStorage;
+  maxAttempts: number;          // Max attempts before lockout
+  lockoutDuration: number;      // Lockout duration in ms
+  delayMultiplier?: number;     // Progressive delay multiplier (default: 2)
+  baseDelay?: number;           // Base delay in ms (default: 1000)
+}
+
+interface BruteForceResult {
+  allowed: boolean;
+  attemptsRemaining: number;
+  lockedUntil?: number;         // Timestamp when unlocked
+  retryAfter?: number;          // Seconds until retry
+}
+```
+
+**Example:**
+```typescript
+const bruteForce = new BruteForceProtection({
+  maxAttempts: 5,
+  lockoutDuration: 3600000 // 1 hour
+});
+
+// Check before attempting
+const check = await bruteForce.checkAttempt('user-123');
+if (!check.allowed) {
+  throw new Error(`Locked until ${new Date(check.lockedUntil!)}`);
+}
+
+// Record failed attempt
+const result = await bruteForce.recordFailedAttempt('user-123');
+if (!result.allowed) {
+  console.log(`Account locked. ${result.attemptsRemaining} attempts remaining`);
+}
+
+// Reset on success
+await bruteForce.recordSuccessfulAttempt('user-123');
+```
+
+### MemoryRateLimitStorage
+
+In-memory storage for rate limiting.
+
+```typescript
+class MemoryRateLimitStorage implements RateLimitStorage {
+  async get(key: string): Promise<unknown>;
+  async set(key: string, value: unknown, ttl?: number): Promise<void>;
+  async delete(key: string): Promise<void>;
+  async exists(key: string): Promise<boolean>;
+  async increment(key: string, amount?: number): Promise<number>;
+  async decrement(key: string, amount?: number): Promise<number>;
+}
+```
+
+---
+
+## Encryption 
+
+### encrypt
+
+Encrypt data with AES-256-GCM.
+
+```typescript
+async function encrypt(
+  data: unknown,
+  secret: string | Buffer,
+  options?: EncryptionOptions
+): Promise<EncryptedData>
+
+interface EncryptionOptions {
+  algorithm?: 'aes-256-gcm' | 'aes-128-gcm';
+  encoding?: 'base64' | 'hex';
+}
+
+interface EncryptedData {
+  ciphertext: string;
+  iv: string;
+  authTag: string;
+  algorithm: string;
+  keyDerivation: string;
+}
+```
+
+### decrypt
+
+Decrypt data encrypted with AES-256-GCM.
+
+```typescript
+async function decrypt(
+  encrypted: EncryptedData | string,
+  secret: string | Buffer
+): Promise<unknown>
+```
+
+### encryptToString
+
+Encrypt data to a single base64 string.
+
+```typescript
+async function encryptToString(
+  data: unknown,
+  secret: string | Buffer,
+  options?: EncryptionOptions
+): Promise<string>
+```
+
+### decryptFromString
+
+Decrypt data from a base64 string.
+
+```typescript
+async function decryptFromString(
+  encrypted: string,
+  secret: string | Buffer
+): Promise<unknown>
+```
+
+### deriveKey
+
+Derive encryption key from password.
+
+```typescript
+async function deriveKey(
+  password: string | Buffer,
+  options?: KeyDerivationOptions
+): Promise<DerivedKey>
+
+interface KeyDerivationOptions {
+  algorithm?: 'pbkdf2' | 'scrypt';
+  salt?: Buffer | string;
+  saltLength?: number;          // Salt length in bytes (default: 32)
+  keyLength?: number;           // Output key length (default: 32)
+  iterations?: number;          // PBKDF2 iterations (default: 100000)
+  cost?: number;                // Scrypt cost factor (default: 16384)
+  blockSize?: number;           // Scrypt block size (default: 8)
+  parallelization?: number;     // Scrypt parallelization (default: 1)
+}
+
+interface DerivedKey {
+  key: Buffer;
+  salt: Buffer;
+  algorithm: 'pbkdf2' | 'scrypt';
+  params: Record<string, number>;
+}
+```
+
+### deriveKeyPBKDF2
+
+Derive key using PBKDF2.
+
+```typescript
+async function deriveKeyPBKDF2(
+  password: string | Buffer,
+  options?: KeyDerivationOptions
+): Promise<DerivedKey>
+```
+
+### deriveKeyScrypt
+
+Derive key using Scrypt (more secure, slower).
+
+```typescript
+async function deriveKeyScrypt(
+  password: string | Buffer,
+  options?: KeyDerivationOptions
+): Promise<DerivedKey>
+```
+
+### exportDerivedKey
+
+Export derived key as string for storage.
+
+```typescript
+function exportDerivedKey(derived: DerivedKey): string
+```
+
+### parseDerivedKey
+
+Parse exported derived key string.
+
+```typescript
+function parseDerivedKey(exported: string): DerivedKey
+```
+
+### generateRandomBytes
+
+Generate cryptographically secure random bytes.
+
+```typescript
+function generateRandomBytes(size: number): Buffer
+```
+
+### generateRandomString
+
+Generate random string with custom charset.
+
+```typescript
+function generateRandomString(length: number, charset?: string): string
+```
+
+### generateRandomAlphanumeric
+
+Generate alphanumeric random string.
+
+```typescript
+function generateRandomAlphanumeric(length: number): string
+```
+
+### generateRandomInt
+
+Generate random integer in range.
+
+```typescript
+function generateRandomInt(min: number, max: number): number
+```
+
+### generateUUID
+
+Generate UUID v4.
+
+```typescript
+function generateUUID(): string
+```
+
+### generateSecureToken
+
+Generate secure token with prefix and encoding.
+
+```typescript
+function generateSecureToken(options?: {
+  length?: number;
+  encoding?: 'base64' | 'hex';
+  prefix?: string;
+}): string
+```
+
+**Example:**
+```typescript
+// Encrypt sensitive data
+const encrypted = await encrypt(
+  { userId: '123', email: 'user@example.com' },
+  'your-secret-key'
+);
+
+// Decrypt
+const decrypted = await decrypt(encrypted, 'your-secret-key');
+
+// Derive key from password
+const derived = await deriveKey('user-password', {
+  algorithm: 'scrypt',
+  cost: 16384
+});
+
+// Generate secure tokens
+const token = generateSecureToken({
+  length: 32,
+  encoding: 'base64',
+  prefix: 'sk_'
+});
+```
+
+---
+
+## Security Headers 
+
+### CSPBuilder
+
+Content Security Policy builder.
+
+```typescript
+class CSPBuilder {
+  constructor(options?: CSPOptions);
+  
+  // Directive methods
+  defaultSrc(...sources: string[]): this;
+  scriptSrc(...sources: string[]): this;
+  styleSrc(...sources: string[]): this;
+  imgSrc(...sources: string[]): this;
+  fontSrc(...sources: string[]): this;
+  connectSrc(...sources: string[]): this;
+  frameSrc(...sources: string[]): this;
+  frameAncestors(...sources: string[]): this;
+  formAction(...sources: string[]): this;
+  baseUri(...sources: string[]): this;
+  objectSrc(...sources: string[]): this;
+  mediaSrc(...sources: string[]): this;
+  workerSrc(...sources: string[]): this;
+  manifestSrc(...sources: string[]): this;
+  
+  // Reporting
+  reportUri(...uris: string[]): this;
+  reportTo(...groups: string[]): this;
+  
+  // Security features
+  upgradeInsecureRequests(): this;
+  blockAllMixedContent(): this;
+  sandbox(...values: string[]): this;
+  requireTrustedTypesFor(...values: string[]): this;
+  trustedTypes(...policies: string[]): this;
+  
+  // Build methods
+  build(): string;
+  getHeaderName(): string;
+  toHeader(): Record<string, string>;
+  
+  // Static presets
+  static strict(): CSPBuilder;
+  static relaxed(): CSPBuilder;
+}
+```
+
+**Example:**
+```typescript
+import { CSPBuilder } from '@amtarc/auth-utils/security/headers';
+
+// Custom CSP
+const csp = new CSPBuilder()
+  .defaultSrc("'self'")
+  .scriptSrc("'self'", "'unsafe-inline'", 'https://cdn.example.com')
+  .styleSrc("'self'", "'unsafe-inline'")
+  .imgSrc("'self'", 'data:', 'https:')
+  .upgradeInsecureRequests()
+  .build();
+
+// Or use presets
+const strictCSP = CSPBuilder.strict(); // Production
+const relaxedCSP = CSPBuilder.relaxed(); // Development
+```
+
+### SecurityHeadersBuilder
+
+Security headers builder.
+
+```typescript
+class SecurityHeadersBuilder {
+  constructor(options?: SecurityHeadersOptions);
+  
+  // Instance methods
+  addHeader(name: string, value: string): this;
+  removeHeader(name: string): this;
+  getHeaders(): Record<string, string>;
+  
+  // Static presets
+  static secure(): SecurityHeadersBuilder;
+  static relaxed(): SecurityHeadersBuilder;
+}
+
+interface SecurityHeadersOptions {
+  csp?: CSPBuilder | string;
+  hsts?: {
+    maxAge?: number;
+    includeSubDomains?: boolean;
+    preload?: boolean;
+  };
+  frameOptions?: 'DENY' | 'SAMEORIGIN';
+  contentTypeOptions?: boolean;
+  xssProtection?: boolean | { mode?: 'block'; report?: string };
+  referrerPolicy?: 'no-referrer' | 'no-referrer-when-downgrade' | 
+                   'origin' | 'origin-when-cross-origin' | 
+                   'same-origin' | 'strict-origin' | 
+                   'strict-origin-when-cross-origin' | 'unsafe-url';
+  permissionsPolicy?: Record<string, string[]>;
+  crossOriginEmbedderPolicy?: 'require-corp' | 'credentialless';
+  crossOriginOpenerPolicy?: 'same-origin' | 'same-origin-allow-popups' | 'unsafe-none';
+  crossOriginResourcePolicy?: 'same-origin' | 'same-site' | 'cross-origin';
+}
+```
+
+### createSecurityHeaders
+
+Convenience function to create security headers.
+
+```typescript
+function createSecurityHeaders(
+  options?: SecurityHeadersOptions
+): Record<string, string>
+```
+
+**Example:**
+```typescript
+import { createSecurityHeaders, SecurityHeadersBuilder } from '@amtarc/auth-utils/security/headers';
+
+// Quick creation
+const headers = createSecurityHeaders({
+  hsts: { maxAge: 31536000, includeSubDomains: true },
+  frameOptions: 'DENY',
+  contentTypeOptions: true
+});
+
+// Or use builder
+const builder = new SecurityHeadersBuilder({ /* options */ });
+builder.addHeader('Custom-Header', 'value');
+const customHeaders = builder.getHeaders();
+
+// Or use presets
+const secureHeaders = SecurityHeadersBuilder.secure().getHeaders();
+const devHeaders = SecurityHeadersBuilder.relaxed().getHeaders();
+```
+
+---
+
+## Additional Types
+
+### Storage Types
+
+```typescript
+interface BaseStorage {
+  get(key: string): Promise<unknown>;
+  set(key: string, value: unknown, ttl?: number): Promise<void>;
+  delete(key: string): Promise<void>;
+  exists(key: string): Promise<boolean>;
+}
+
+interface CounterStorage extends BaseStorage {
+  increment(key: string, amount?: number): Promise<number>;
+  decrement(key: string, amount?: number): Promise<number>;
+}
+
+interface StorageOptions {
+  ttl?: number;                 // TTL in seconds
+  metadata?: Record<string, unknown>;
+}
+```
+
+### CSRF Types
+
+```typescript
+interface CSRFStorageAdapter extends BaseStorage {
+  get(key: string): Promise<string | null>;
+  set(key: string, token: string, ttl?: number): Promise<void>;
+  delete(key: string): Promise<void>;
+  exists(key: string): Promise<boolean>;
+}
+
+interface CSRFProtectionOptions {
+  storage: CSRFStorageAdapter;
+  tokenLength?: number;
+  lifetime?: number;
+  regenerate?: 'per-request' | 'per-session' | 'never';
+}
+```
+
+### Rate Limiting Types
+
+```typescript
+interface RateLimitStorage extends CounterStorage {}
+
+interface RateLimitInfo {
+  limit: number;
+  remaining: number;
+  resetAt: number;
+  retryAfter?: number;
+}
+```
+
+---
+
+
+## Related Documentation
+
+- [Introduction](/guide/introduction)
+- [Quick Start](/guide/quick-start)
+- [Session Management](/guide/sessions)
+- [Guards & Middleware](/guide/guards)
+- [Cookies](/guide/cookies)
+- [Error Handling](/guide/errors)
+- [Security Features](/guide/security)
+- [Storage & Integration](/guide/storage)

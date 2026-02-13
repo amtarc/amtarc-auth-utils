@@ -5,6 +5,60 @@ All notable changes to `@amtarc/auth-utils` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-02-13
+
+### Added
+
+**Security Package (Phase 3):**
+
+**CSRF Protection:**
+- Token generation with configurable length and timestamps
+- Double-submit cookie pattern for stateless protection
+- Synchronizer token pattern with server-side validation
+- Session-based and memory storage adapters
+- `SessionCSRFAdapter` for session integration
+- Timing-safe token comparison to prevent timing attacks
+
+**Rate Limiting:**
+- Token Bucket algorithm (allows bursts, maintains average rate)
+- Fixed Window algorithm (simple counter with fixed reset intervals)
+- Sliding Window Log algorithm (precise tracking)
+- Sliding Window Counter algorithm (optimal balance)
+- Brute-force protection with progressive delays and lockout
+- Memory storage adapter with TTL support
+- Atomic increment/decrement operations
+
+**Security Headers:**
+- CSP Builder with type-safe directive configuration
+- Support for all CSP directives (default-src, script-src, etc.)
+- Security headers collection (HSTS, X-Frame-Options, etc.)
+- Permissions-Policy, COEP, COOP, CORP support
+- Preset configurations: strict (production), relaxed (development)
+- Method chaining for builder pattern
+
+**Encryption:**
+- AES-256-GCM encryption/decryption with authentication
+- Key derivation: PBKDF2 (100k iterations) and Scrypt (16384 cost)
+- Additional Authenticated Data (AAD) support
+- Random generation: bytes, strings, UUIDs, secure tokens
+- String format encryption (iv.authTag.ciphertext)
+- Export/parse functionality for derived keys
+
+**Storage Infrastructure:**
+- `BaseStorage` interface with get, set, delete, exists
+- `CounterStorage` interface with increment, decrement
+- `UniversalMemoryStorage` adapter for all modules
+- TTL support with automatic cleanup
+- User session indexing for multi-device management
+- Works across sessions, CSRF, and rate limiting modules
+
+### Security Fixes
+- Fixed CSRF token validation to prevent timestamp bypass attacks
+- Added HTML attribute escaping to prevent XSS in token helpers
+- Fixed ESM compatibility issues with dynamic imports
+- Added error handling for malformed cookie encoding
+- Added resource leak prevention with unref() on cleanup intervals
+
 ## [1.1.0] - 2026-02-11
 
 ### Added

@@ -113,9 +113,21 @@ export function parseSetCookie(setCookieHeader: string): ParsedCookie | null {
   const name = firstPart.slice(0, separatorIndex).trim();
   const value = firstPart.slice(separatorIndex + 1).trim();
 
+  let decodedName = name;
+  let decodedValue = value;
+  try {
+    decodedName = decodeURIComponent(name);
+  } catch {
+    // If decoding fails, fall back to the raw name
+  }
+  try {
+    decodedValue = decodeURIComponent(value);
+  } catch {
+    // If decoding fails, fall back to the raw value
+  }
   const parsed: ParsedCookie = {
-    name: decodeURIComponent(name),
-    value: decodeURIComponent(value),
+    name: decodedName,
+    value: decodedValue,
   };
 
   // Parse attributes

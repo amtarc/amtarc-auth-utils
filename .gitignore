@@ -52,4 +52,8 @@ playwright/.cache
 # Size limit
 .size-limit.json
 
+# VitePress
+docs/.vitepress/cache
+docs/.vitepress/dist
+
 requirements/

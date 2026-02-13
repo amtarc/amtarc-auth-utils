@@ -6,6 +6,11 @@
 /**
  * Abstract interface for session storage implementations
  * Allows pluggable storage backends (memory, cookie, Redis, database, etc.)
+ *
+ * Note: While this interface has similar methods to BaseStorage,
+ * it has specialized signatures for session-specific operations.
+ * Use UniversalMemoryStorage or similar adapters to implement both
+ * SessionStorageAdapter and BaseStorage interfaces.
  */
 export interface SessionStorageAdapter<T = unknown> {
   /**
@@ -28,6 +33,12 @@ export interface SessionStorageAdapter<T = unknown> {
    * @param sessionId - Unique session identifier
    */
   delete(sessionId: string): Promise<void>;
+
+  /**
+   * Check if session exists and is valid
+   * @param sessionId - Unique session identifier
+   */
+  exists(sessionId: string): Promise<boolean>;
 
   /**
    * Update session expiration without modifying data
