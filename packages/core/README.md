@@ -1,6 +1,6 @@
 # @amtarc/auth-utils
 
-> Enterprise-grade authentication utilities with session management, guards, secure cookies, and comprehensive error handling
+> Enterprise-grade authentication and security utilities with session management, guards, CSRF protection, rate limiting, encryption, and security headers
 
 [![npm version](https://img.shields.io/npm/v/@amtarc/auth-utils.svg)](https://www.npmjs.com/package/@amtarc/auth-utils)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -37,6 +37,14 @@ yarn add @amtarc/auth-utils
 - AES-256-GCM cookie encryption
 - Cookie rotation and deletion
 - Secure defaults (HttpOnly, Secure, SameSite)
+
+### Security
+- CSRF protection (double-submit & synchronizer patterns)
+- Rate limiting (4 algorithms: token bucket, fixed window, sliding window)
+- Brute-force protection with progressive delays
+- Security headers (CSP, HSTS, X-Frame-Options, etc.)
+- AES-256-GCM encryption with key derivation
+- Secure random generation (tokens, UUIDs, etc.)
 
 ### Error Handling
 - 17+ specialized error classes
@@ -116,6 +124,8 @@ import { UnauthenticatedError, SessionExpiredError } from '@amtarc/auth-utils/er
 
 // Security (Phase 3)
 import { generateCSRFToken, createRateLimiter } from '@amtarc/auth-utils/security';
+import { CSPBuilder, createSecurityHeaders } from '@amtarc/auth-utils/security/headers';
+import { encrypt, deriveKey } from '@amtarc/auth-utils/security/encryption';
 ```
 
 ## API Documentation
@@ -145,6 +155,18 @@ For complete API reference with all methods, parameters, and examples, see our [
 - `signCookie()` / `verifyCookie()` - HMAC signing
 - `encryptCookie()` / `decryptCookie()` - AES-256-GCM encryption
 - `deleteCookie()` / `rotateCookie()` - Cookie lifecycle
+
+**Security (Phase 3):**
+- `generateCSRFToken()` / `validateCSRFToken()` - CSRF protection
+- `generateDoubleSubmitToken()` - Stateless CSRF
+- `generateSynchronizerToken()` - Server-side CSRF
+- `createRateLimiter()` - Rate limiting (4 algorithms)
+- `BruteForceProtection` - Login protection
+- `CSPBuilder` - Content Security Policy builder
+- `createSecurityHeaders()` - Security headers collection
+- `encrypt()` / `decrypt()` - AES-256-GCM encryption
+- `deriveKey()` - PBKDF2/Scrypt key derivation
+- `generateSecureToken()` - Cryptographic tokens
 
 **Error Handling:**
 - `AuthUtilsError` - Base error with HTTP status codes
@@ -180,17 +202,17 @@ Framework-agnostic with adapter examples for Express, Next.js, Fastify, and more
 
 ## Bundle Size
 
-- **Main**: 2.01 KB
-- **Session**: 603 B  
+- **Main (Full)**: 10.63 KB
+- **Session**: 2.48 KB  
 - **Guards**: 393 B
 - **Cookies**: 708 B
 - **Errors**: 686 B
 
-Total: ~4.4 KB (tree-shakeable)
+Total: ~10.6 KB (tree-shakeable - use only what you need)
 
 ## Testing
 
-375 tests with >95% coverage:
+400+ tests with >95% coverage:
 
 ```bash
 pnpm test          # Run tests in watch mode
