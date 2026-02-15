@@ -20,8 +20,6 @@ export interface RoleOptions {
   includeInherited?: boolean;
   /** Maximum depth for role hierarchy traversal */
   maxDepth?: number;
-  /** Check expiration of role assignments */
-  checkExpiration?: boolean;
 }
 
 /**

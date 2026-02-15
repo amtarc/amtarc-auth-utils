@@ -606,9 +606,9 @@ Define a new role.
 
 ```typescript
 function defineRole(
-  role: Omit<Role, 'id' | 'permissions'> & { 
-    id?: RoleId;
-    permissions?: Set<PermissionId> | PermissionId[];
+  role: Omit<Role, 'permissions' | 'parents' | 'createdAt' | 'updatedAt'> & {
+    permissions?: string[];
+    parents?: string[];
   }
 ): Promise<Role>
 ```
@@ -767,7 +767,7 @@ function assignRole(
     scope?: string;
     metadata?: Record<string, unknown>;
   }
-): Promise<UserRole>
+): Promise<void>
 ```
 
 **Example:**
@@ -1069,8 +1069,8 @@ class PermissionManager {
 class RoleManager {
   constructor(options: { storage: RBACStorageAdapter });
   
-  defineRole(role: Omit<Role, 'id' | 'permissions'> & { id?: RoleId; permissions?: Set<PermissionId> | PermissionId[] }): Promise<Role>;
-  updateRole(id: RoleId, updates: Partial<Omit<Role, 'id' | 'permissions'>>): Promise<Role>;
+  defineRole(role: Omit<Role, 'permissions' | 'parents' | 'createdAt' | 'updatedAt'> & { permissions?: string[]; parents?: string[] }): Promise<Role>;
+  updateRole(id: RoleId, updates: Partial<Omit<Role, 'id' | 'permissions' | 'parents'>> & { permissions?: string[]; parents?: string[] }): Promise<Role>;
   deleteRole(id: RoleId): Promise<void>;
   getRole(id: RoleId): Promise<Role | null>;
   listRoles(): Promise<Role[]>;
@@ -1080,7 +1080,7 @@ class RoleManager {
   revokePermission(roleId: RoleId, permissionId: PermissionId): Promise<void>;
   getRolePermissions(roleId: RoleId, options?: RoleOptions): Promise<Set<PermissionId>>;
   
-  assignRole(userId: UserId, roleId: RoleId, options?: { expiresAt?: number; scope?: string; metadata?: Record<string, unknown> }): Promise<UserRole>;
+  assignRole(userId: UserId, roleId: RoleId, options?: { expiresAt?: number; scope?: string; metadata?: Record<string, unknown> }): Promise<void>;
   removeRole(userId: UserId, roleId: RoleId, scope?: string): Promise<void>;
   getUserRoles(userId: UserId): Promise<UserRole[]>;
   
@@ -1094,10 +1094,11 @@ class RoleManager {
 
 ```typescript
 class RoleHierarchy {
-  constructor(storage: RBACStorageAdapter);
+  constructor(options: { storage: RBACStorageAdapter; maxDepth?: number });
   
-  validateHierarchy(): Promise<HierarchyValidation>;
-  getRoleDepth(roleId: RoleId): Promise<number>;
+  validateHierarchy(roleId: RoleId): Promise<HierarchyValidation>;
+  validateAll(): Promise<HierarchyValidation>;
+  calculateDepth(roleId: RoleId): Promise<number>;
   getAncestors(roleId: RoleId): Promise<Set<RoleId>>;
   getDescendants(roleId: RoleId): Promise<Set<RoleId>>;
   getAllPermissions(roleId: RoleId, maxDepth?: number): Promise<Set<PermissionId>>;
@@ -1120,7 +1121,7 @@ class RBACGuards {
   constructor(options: {
     roleManager: RoleManager;
     throwOnFailure?: boolean;
-    defaultOptions?: PermissionCheckOptions;
+    onError?: (error: Error, context: RBACGuardContext) => void | Promise<void>;
   });
   
   hasPermission(userId: UserId, permissionId: PermissionId, options?: PermissionCheckOptions): Promise<boolean>;
@@ -1134,7 +1135,7 @@ class RBACGuards {
 function createRBACGuards(options: {
   roleManager: RoleManager;
   throwOnFailure?: boolean;
-  defaultOptions?: PermissionCheckOptions;
+  onError?: (error: Error, context: RBACGuardContext) => void | Promise<void>;
 }): RBACGuards
 ```
 

@@ -118,8 +118,8 @@ export class PermissionManager {
         const created = await this.definePermission(permission);
         results.push(created);
       } catch (error) {
-        // Continue with other permissions even if one fails
-        console.warn(`Failed to define permission: ${error}`);
+        // Intentionally ignore individual failures to continue with other permissions
+        // Consumers can check the returned results array for successful definitions
       }
     }
 
@@ -129,12 +129,34 @@ export class PermissionManager {
   /**
    * Generate permission ID from name
    * Converts "Read Users" -> "read:users"
+   * Safe against ReDoS by limiting input and avoiding backtracking
    */
   private generatePermissionId(name: string): PermissionId {
-    return name
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, ':')
-      .replace(/^:+/, '')
-      .replace(/:+$/, '');
+    // Limit input length to prevent ReDoS
+    const safeName = name.slice(0, 100).toLowerCase();
+
+    // Build ID character by character (safe, no backtracking)
+    let result = '';
+    let lastWasColon = false;
+
+    for (let i = 0; i < safeName.length; i++) {
+      const char = safeName[i];
+      if (!char) continue;
+
+      const isAlphanumeric =
+        (char >= 'a' && char <= 'z') || (char >= '0' && char <= '9');
+
+      if (isAlphanumeric) {
+        result += char;
+        lastWasColon = false;
+      } else if (!lastWasColon && result.length > 0) {
+        // Replace non-alphanumeric with colon, but avoid consecutive colons
+        result += ':';
+        lastWasColon = true;
+      }
+    }
+
+    // Remove trailing colon if any
+    return result.endsWith(':') ? result.slice(0, -1) : result;
   }
 }

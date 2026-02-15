@@ -28,11 +28,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Role`, `Permission`, `UserRole` interfaces
 - `RBACStorageAdapter` interface for custom storage implementations
 - `RoleOptions`, `PermissionCheckOptions`, `HierarchyValidation` configuration types
-- Authorization-specific error classes (imported via `@auth-utils/core/authorization/types`)
+- Authorization-specific error classes (imported via `@amtarc/auth-utils/authorization/types`)
 
 **New Exports:**
-- `@auth-utils/core/authorization` - Complete authorization package
-- `@auth-utils/core/authorization/rbac` - RBAC submodule
+- `@amtarc/auth-utils/authorization` - Complete authorization package
+- `@amtarc/auth-utils/authorization/rbac` - RBAC submodule
 
 ## [1.2.1] - 2026-02-14
 

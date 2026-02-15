@@ -236,7 +236,7 @@ await defineRole({
   id: 'editor',
   name: 'Editor',
   description: 'Content editor',
-  parents: new Set(['user']) // Inherits user permissions
+  parents: ['user'] // Inherits user permissions
 });
 
 await grantPermissions('editor', ['posts:create', 'posts:update']);
@@ -246,7 +246,7 @@ await defineRole({
   id: 'admin',
   name: 'Administrator',
   description: 'Full administrator',
-  parents: new Set(['editor']) // Inherits editor + user permissions
+  parents: ['editor'] // Inherits editor + user permissions
 });
 
 await grantPermissions('admin', ['posts:delete', 'users:manage']);
@@ -432,9 +432,9 @@ import { createRBACGuards } from '@amtarc/auth-utils';
 const guards = createRBACGuards({
   roleManager,
   throwOnFailure: false, // Return false instead of throwing
-  defaultOptions: {
-    includeInherited: true,
-    mode: 'AND'
+  onError: (error, context) => {
+    // Optional custom error handling
+    console.log('Authorization failed:', error.message);
   }
 });
 
@@ -547,18 +547,21 @@ await roleManager.assignRole('user-123', 'editor');
 import { RoleHierarchy, MemoryRBACStorage } from '@amtarc/auth-utils';
 
 const storage = new MemoryRBACStorage();
-const hierarchy = new RoleHierarchy(storage);
+const hierarchy = new RoleHierarchy({ storage });
 
-// Check for circular dependencies
-const validation = await hierarchy.validateHierarchy();
+// Validate a specific role's hierarchy
+const validation = await hierarchy.validateHierarchy('admin');
 
 if (!validation.valid) {
   console.error('Hierarchy errors:', validation.errors);
-  // ['Circular dependency detected: admin -> editor -> admin']
+  // ['Circular dependency detected in role hierarchy for admin']
 }
 
-// Get role depth (distance from root)
-const depth = await hierarchy.getRoleDepth('admin');
+// Validate entire role system
+const fullValidation = await hierarchy.validateAll();
+
+// Calculate role depth (distance from root)
+const depth = await hierarchy.calculateDepth('admin');
 
 // Get all ancestors
 const ancestors = await hierarchy.getAncestors('admin');
@@ -760,7 +763,8 @@ const role: Role = {
   description: 'Content editor',
   permissions: new Set(['posts:create', 'posts:update']),
   parents: new Set(['user']),
-  createdAt: Date.now()
+  createdAt: Date.now(),
+  updatedAt: Date.now()
 };
 
 // Type-safe permission check options
@@ -803,18 +807,18 @@ Use a consistent naming pattern:
 //      -> Admin   -> Moderator
 
 // Avoid deep hierarchies:
-// ❌ SuperAdmin -> Admin -> Manager -> Supervisor -> Employee
+//  SuperAdmin -> Admin -> Manager -> Supervisor -> Employee
 ```
 
 ### 3. Prefer Functional API
 
 ```typescript
-// ✅ Recommended (functional)
+//  Recommended (functional)
 await hasPermission('user-123', 'posts:delete');
 
-// ⚠️ Advanced use only (class-based)
-const manager = new RoleManager({ storage });
-await manager.hasPermission('user-123', 'posts:delete');
+//  Advanced use only (class-based)
+const guards = new RBACGuards({ roleManager });
+await guards.hasPermission('user-123', 'posts:delete');
 ```
 
 ### 4. Use Scopes for Multi-Tenancy
@@ -887,12 +891,12 @@ async function cachedHasPermission(
 
 ```typescript
 // Instead of individual checks:
-// ❌ Inefficient
+//  Inefficient
 for (const permission of permissions) {
   await hasPermission(userId, permission);
 }
 
-// ✅ Efficient - use batch function
+//  Efficient - use batch function
 await hasAllPermissions(userId, permissions);
 ```
 

@@ -144,18 +144,50 @@ export class MemoryRBACStorage implements RBACStorageAdapter {
       this.userRoles.delete(userId);
     }
 
-    // Update reverse index
-    const users = this.roleUsers.get(roleId);
-    if (users) {
-      users.delete(userId);
-      if (users.size === 0) {
-        this.roleUsers.delete(roleId);
+    // Update reverse index: only remove user from roleUsers if they
+    // no longer have ANY assignment for this roleId (in any scope)
+    const userStillHasRole = filtered.some((a) => a.roleId === roleId);
+    if (!userStillHasRole) {
+      const users = this.roleUsers.get(roleId);
+      if (users) {
+        users.delete(userId);
+        if (users.size === 0) {
+          this.roleUsers.delete(roleId);
+        }
       }
     }
   }
 
   async listUsersByRole(roleId: RoleId): Promise<UserId[]> {
-    return Array.from(this.roleUsers.get(roleId) || []);
+    const usersForRole = this.roleUsers.get(roleId);
+    if (!usersForRole) {
+      return [];
+    }
+
+    const now = Date.now();
+    const activeUsers: UserId[] = [];
+
+    // Filter out users with expired assignments
+    for (const userId of usersForRole) {
+      const assignments = this.userRoles.get(userId) || [];
+      const hasActiveAssignment = assignments.some(
+        (a) => a.roleId === roleId && (!a.expiresAt || a.expiresAt > now)
+      );
+
+      if (hasActiveAssignment) {
+        activeUsers.push(userId);
+      } else {
+        // Clean up stale reverse index entries
+        usersForRole.delete(userId);
+      }
+    }
+
+    // Clean up empty role entry
+    if (usersForRole.size === 0) {
+      this.roleUsers.delete(roleId);
+    }
+
+    return activeUsers;
   }
 
   /**

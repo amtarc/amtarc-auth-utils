@@ -15,6 +15,7 @@ export default defineConfig({
     'src/security/encryption/index.ts',
     'src/authorization/index.ts',
     'src/authorization/rbac/index.ts',
+    'src/authorization/types.ts',
   ],
   format: ['esm', 'cjs'],
   dts: true,

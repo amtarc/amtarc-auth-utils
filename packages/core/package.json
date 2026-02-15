@@ -68,6 +68,11 @@
       "types": "./dist/authorization/rbac/index.d.ts",
       "import": "./dist/authorization/rbac/index.js",
       "require": "./dist/authorization/rbac/index.cjs"
+    },
+    "./authorization/types": {
+      "types": "./dist/authorization/types.d.ts",
+      "import": "./dist/authorization/types.js",
+      "require": "./dist/authorization/types.cjs"
     }
   },
   "files": [
