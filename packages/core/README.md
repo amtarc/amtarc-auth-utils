@@ -1,6 +1,6 @@
 # @amtarc/auth-utils
 
-> Enterprise-grade authentication and security utilities with session management, guards, CSRF protection, rate limiting, encryption, and security headers
+> Enterprise-grade authentication and security utilities with session management, guards, CSRF protection, rate limiting, encryption, security headers, and RBAC authorization
 
 [![npm version](https://img.shields.io/npm/v/@amtarc/auth-utils.svg)](https://www.npmjs.com/package/@amtarc/auth-utils)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -46,8 +46,17 @@ yarn add @amtarc/auth-utils
 - AES-256-GCM encryption with key derivation
 - Secure random generation (tokens, UUIDs, etc.)
 
+### Authorization
+- **RBAC (Role-Based Access Control)** with permission inheritance
+- Scoped role assignments (tenant, organization, project)
+- Role hierarchy validation with circular dependency detection
+- Permission and role management with auto-ID generation
+- Authorization guards for route/resource protection
+- Expiring role assignments with automatic cleanup
+- Memory storage adapter (custom adapters supported)
+
 ### Error Handling
-- 17+ specialized error classes
+- 25+ specialized error classes
 - HTTP status code mapping
 - Type guards for error classification
 - JSON serialization for API responses
@@ -122,10 +131,14 @@ import { createAuthCookie, signCookie, encryptCookie } from '@amtarc/auth-utils/
 // Errors only
 import { UnauthenticatedError, SessionExpiredError } from '@amtarc/auth-utils/errors';
 
-// Security (Phase 3)
+// Security
 import { generateCSRFToken, createRateLimiter } from '@amtarc/auth-utils/security';
 import { CSPBuilder, createSecurityHeaders } from '@amtarc/auth-utils/security/headers';
 import { encrypt, deriveKey } from '@amtarc/auth-utils/security/encryption';
+
+// Authorization
+import { PermissionManager, RoleManager, RBACGuards } from '@amtarc/auth-utils/authorization';
+import { MemoryRBACStorage } from '@amtarc/auth-utils/authorization/rbac';
 ```
 
 ## API Documentation
@@ -156,7 +169,7 @@ For complete API reference with all methods, parameters, and examples, see our [
 - `encryptCookie()` / `decryptCookie()` - AES-256-GCM encryption
 - `deleteCookie()` / `rotateCookie()` - Cookie lifecycle
 
-**Security (Phase 3):**
+**Security:**
 - `generateCSRFToken()` / `validateCSRFToken()` - CSRF protection
 - `generateDoubleSubmitToken()` - Stateless CSRF
 - `generateSynchronizerToken()` - Server-side CSRF
@@ -167,6 +180,16 @@ For complete API reference with all methods, parameters, and examples, see our [
 - `encrypt()` / `decrypt()` - AES-256-GCM encryption
 - `deriveKey()` - PBKDF2/Scrypt key derivation
 - `generateSecureToken()` - Cryptographic tokens
+
+**Authorization:**
+- `PermissionManager` - Define and manage permissions
+- `RoleManager` - Create roles, grant permissions, assign to users
+- `RoleHierarchy` - Validate role hierarchies with circular detection
+- `RBACGuards` - Authorization guards (requireRole, requirePermission)
+- `MemoryRBACStorage` - In-memory storage with expiration
+- Role inheritance (up to 10 levels)
+- Scoped assignments (tenant, organization, project)
+- Batch operations for roles and permissions
 
 **Error Handling:**
 - `AuthUtilsError` - Base error with HTTP status codes
@@ -202,17 +225,13 @@ Framework-agnostic with adapter examples for Express, Next.js, Fastify, and more
 
 ## Bundle Size
 
-- **Main (Full)**: 10.63 KB
-- **Session**: 2.48 KB  
-- **Guards**: 393 B
-- **Cookies**: 708 B
-- **Errors**: 686 B
+- **Main (Full)**: ~12 KB (gzipped)
 
-Total: ~10.6 KB (tree-shakeable - use only what you need)
+Total: ~12 KB (tree-shakeable - use only what you need)
 
 ## Testing
 
-400+ tests with >95% coverage:
+661 tests with >95% coverage:
 
 ```bash
 pnpm test          # Run tests in watch mode

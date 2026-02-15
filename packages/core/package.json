@@ -1,7 +1,7 @@
 {
   "name": "@amtarc/auth-utils",
-  "version": "1.2.1",
-  "description": "Enterprise-grade authentication utilities with session management, guards, secure cookies, and comprehensive error handling",
+  "version": "1.3.0",
+  "description": "Enterprise-grade authentication and authorization utilities with session management, RBAC, guards, secure cookies, and comprehensive error handling",
   "type": "module",
   "exports": {
     ".": {
@@ -58,6 +58,16 @@
       "types": "./dist/storage/index.d.ts",
       "import": "./dist/storage/index.js",
       "require": "./dist/storage/index.cjs"
+    },
+    "./authorization": {
+      "types": "./dist/authorization/index.d.ts",
+      "import": "./dist/authorization/index.js",
+      "require": "./dist/authorization/index.cjs"
+    },
+    "./authorization/rbac": {
+      "types": "./dist/authorization/rbac/index.d.ts",
+      "import": "./dist/authorization/rbac/index.js",
+      "require": "./dist/authorization/rbac/index.cjs"
     }
   },
   "files": [

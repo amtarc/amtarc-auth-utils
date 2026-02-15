@@ -5,6 +5,35 @@ All notable changes to `@amtarc/auth-utils` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-02-15
+
+### Added
+
+**Authorization Package (Phase 4):**
+
+**RBAC (Role-Based Access Control):**
+- `PermissionManager` with CRUD operations and auto-ID generation
+- `RoleManager` with user assignment, permission granting, and permission inheritance
+- `RoleHierarchy` validator with circular dependency detection (up to 10 levels)
+- `MemoryRBACStorage` adapter with expiration and automatic cleanup
+- `RBACGuards` with comprehensive permission and role checking
+- Support for scoped role assignments (tenant, organization, project)
+- Permission inheritance through role hierarchies with circular dependency prevention
+- Expiring role assignments with automatic cleanup
+- Batch operations for permissions and roles
+- Type-safe permission and role IDs with automatic ID generation from names
+
+**Authorization Types:**
+- `UserId`, `ResourceId`, `AuthorizationResult`, `AuthorizationContext`
+- `Role`, `Permission`, `UserRole` interfaces
+- `RBACStorageAdapter` interface for custom storage implementations
+- `RoleOptions`, `PermissionCheckOptions`, `HierarchyValidation` configuration types
+- Authorization-specific error classes (imported via `@auth-utils/core/authorization/types`)
+
+**New Exports:**
+- `@auth-utils/core/authorization` - Complete authorization package
+- `@auth-utils/core/authorization/rbac` - RBAC submodule
+
 ## [1.2.1] - 2026-02-14
 
 ### Changed

@@ -487,6 +487,779 @@ interface MemoryStorageStats {
 
 ---
 
+## Authorization & RBAC
+
+Role-Based Access Control system with permissions, role hierarchy, and access guards.
+
+### Setup
+
+#### setDefaultRBACStorage
+
+Configure the default storage adapter for RBAC operations.
+
+```typescript
+function setDefaultRBACStorage(storage: RBACStorageAdapter): void
+```
+
+**Example:**
+```typescript
+import { setDefaultRBACStorage, MemoryRBACStorage } from '@amtarc/auth-utils';
+
+const storage = new MemoryRBACStorage();
+setDefaultRBACStorage(storage);
+```
+
+### Permission Management
+
+#### definePermission
+
+Define a new permission.
+
+```typescript
+function definePermission(
+  permission: Omit<Permission, 'id'> & { id?: PermissionId }
+): Promise<Permission>
+```
+
+**Parameters:**
+```typescript
+interface Permission {
+  id: PermissionId;
+  name: string;
+  description?: string;
+  resourceType?: string;
+  actions?: string[];
+  metadata?: Record<string, unknown>;
+}
+```
+
+**Example:**
+```typescript
+await definePermission({
+  id: 'posts:delete',
+  name: 'Delete Posts',
+  description: 'Allows deleting blog posts',
+  resourceType: 'post',
+  actions: ['delete']
+});
+```
+
+#### definePermissions
+
+Define multiple permissions at once.
+
+```typescript
+function definePermissions(
+  permissions: Array<Omit<Permission, 'id'> & { id?: PermissionId }>
+): Promise<Permission[]>
+```
+
+**Example:**
+```typescript
+await definePermissions([
+  { id: 'posts:create', name: 'Create Posts' },
+  { id: 'posts:update', name: 'Update Posts' },
+  { id: 'posts:delete', name: 'Delete Posts' }
+]);
+```
+
+#### updatePermission
+
+Update an existing permission.
+
+```typescript
+function updatePermission(
+  id: PermissionId,
+  updates: Partial<Omit<Permission, 'id'>>
+): Promise<Permission>
+```
+
+#### deletePermission
+
+Delete a permission.
+
+```typescript
+function deletePermission(id: PermissionId): Promise<void>
+```
+
+#### getPermission
+
+Get permission by ID.
+
+```typescript
+function getPermission(id: PermissionId): Promise<Permission | null>
+```
+
+#### listPermissions
+
+List all defined permissions.
+
+```typescript
+function listPermissions(): Promise<Permission[]>
+```
+
+### Role Management
+
+#### defineRole
+
+Define a new role.
+
+```typescript
+function defineRole(
+  role: Omit<Role, 'id' | 'permissions'> & { 
+    id?: RoleId;
+    permissions?: Set<PermissionId> | PermissionId[];
+  }
+): Promise<Role>
+```
+
+**Parameters:**
+```typescript
+interface Role {
+  id: RoleId;
+  name: string;
+  description?: string;
+  permissions: Set<PermissionId>;
+  parents?: Set<RoleId>;
+  metadata?: Record<string, unknown>;
+  createdAt?: number;
+  updatedAt?: number;
+}
+```
+
+**Example:**
+```typescript
+await defineRole({
+  id: 'editor',
+  name: 'Editor',
+  description: 'Can create and edit content',
+  parents: new Set(['user']) // Inherits from 'user' role
+});
+```
+
+#### updateRole
+
+Update an existing role.
+
+```typescript
+function updateRole(
+  id: RoleId,
+  updates: Partial<Omit<Role, 'id' | 'permissions'>>
+): Promise<Role>
+```
+
+#### deleteRole
+
+Delete a role.
+
+```typescript
+function deleteRole(id: RoleId): Promise<void>
+```
+
+#### getRole
+
+Get role by ID.
+
+```typescript
+function getRole(id: RoleId): Promise<Role | null>
+```
+
+#### listRoles
+
+List all defined roles.
+
+```typescript
+function listRoles(): Promise<Role[]>
+```
+
+### Role-Permission Management
+
+#### grantPermission
+
+Grant a single permission to a role.
+
+```typescript
+function grantPermission(
+  roleId: RoleId,
+  permissionId: PermissionId
+): Promise<void>
+```
+
+**Example:**
+```typescript
+await grantPermission('editor', 'posts:create');
+```
+
+#### grantPermissions
+
+Grant multiple permissions to a role.
+
+```typescript
+function grantPermissions(
+  roleId: RoleId,
+  permissionIds: PermissionId[]
+): Promise<void>
+```
+
+**Example:**
+```typescript
+await grantPermissions('editor', [
+  'posts:create',
+  'posts:update',
+  'posts:read'
+]);
+```
+
+#### revokePermission
+
+Revoke a permission from a role.
+
+```typescript
+function revokePermission(
+  roleId: RoleId,
+  permissionId: PermissionId
+): Promise<void>
+```
+
+#### getRolePermissions
+
+Get all permissions for a role.
+
+```typescript
+function getRolePermissions(
+  roleId: RoleId,
+  options?: RoleOptions
+): Promise<Set<PermissionId>>
+```
+
+**Options:**
+```typescript
+interface RoleOptions {
+  includeInherited?: boolean; // Include permissions from parent roles
+  maxDepth?: number;          // Max hierarchy depth to traverse
+  checkExpiration?: boolean;  // Check role assignment expiration
+}
+```
+
+**Example:**
+```typescript
+// Get direct permissions only
+const directPerms = await getRolePermissions('editor');
+
+// Get all permissions including inherited
+const allPerms = await getRolePermissions('editor', {
+  includeInherited: true
+});
+```
+
+### User-Role Assignment
+
+#### assignRole
+
+Assign a role to a user.
+
+```typescript
+function assignRole(
+  userId: UserId,
+  roleId: RoleId,
+  options?: {
+    expiresAt?: number;
+    scope?: string;
+    metadata?: Record<string, unknown>;
+  }
+): Promise<UserRole>
+```
+
+**Example:**
+```typescript
+// Basic assignment
+await assignRole('user-123', 'editor');
+
+// With expiration
+await assignRole('user-456', 'admin', {
+  expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000 // 30 days
+});
+
+// With scope (multi-tenant)
+await assignRole('user-789', 'admin', {
+  scope: 'org:acme-corp'
+});
+```
+
+#### removeRole
+
+Remove a role from a user.
+
+```typescript
+function removeRole(
+  userId: UserId,
+  roleId: RoleId,
+  scope?: string
+): Promise<void>
+```
+
+**Example:**
+```typescript
+// Remove global role
+await removeRole('user-123', 'editor');
+
+// Remove scoped role
+await removeRole('user-123', 'admin', 'org:acme-corp');
+```
+
+#### getUserRoles
+
+Get all role assignments for a user.
+
+```typescript
+function getUserRoles(userId: UserId): Promise<UserRole[]>
+```
+
+**Returns:**
+```typescript
+interface UserRole {
+  userId: UserId;
+  roleId: RoleId;
+  assignedAt: number;
+  expiresAt?: number;
+  scope?: string;
+  metadata?: Record<string, unknown>;
+}
+```
+
+### Role Checks
+
+#### hasRole
+
+Check if user has a specific role.
+
+```typescript
+function hasRole(
+  userId: UserId,
+  roleId: RoleId,
+  scope?: string
+): Promise<boolean>
+```
+
+**Example:**
+```typescript
+const isAdmin = await hasRole('user-123', 'admin');
+
+const isOrgAdmin = await hasRole('user-123', 'admin', 'org:acme');
+```
+
+#### hasAnyRole
+
+Check if user has any of the specified roles.
+
+```typescript
+function hasAnyRole(
+  userId: UserId,
+  roleIds: RoleId[],
+  scope?: string
+): Promise<boolean>
+```
+
+**Example:**
+```typescript
+const isStaff = await hasAnyRole('user-123', ['admin', 'moderator', 'editor']);
+```
+
+#### hasAllRoles
+
+Check if user has all specified roles.
+
+```typescript
+function hasAllRoles(
+  userId: UserId,
+  roleIds: RoleId[],
+  scope?: string
+): Promise<boolean>
+```
+
+### Permission Checks
+
+#### hasPermission
+
+Check if user has a specific permission.
+
+```typescript
+function hasPermission(
+  userId: UserId,
+  permissionId: PermissionId,
+  options?: PermissionCheckOptions
+): Promise<boolean>
+```
+
+**Options:**
+```typescript
+interface PermissionCheckOptions {
+  mode?: 'AND' | 'OR';        // For multiple permissions
+  includeInherited?: boolean;  // Include inherited permissions
+  scope?: string;              // Check within specific scope
+}
+```
+
+**Example:**
+```typescript
+const canDelete = await hasPermission('user-123', 'posts:delete');
+
+const canDeleteInOrg = await hasPermission('user-123', 'posts:delete', {
+  scope: 'org:acme',
+  includeInherited: true
+});
+```
+
+#### hasAnyPermission
+
+Check if user has any of the specified permissions.
+
+```typescript
+function hasAnyPermission(
+  userId: UserId,
+  permissionIds: PermissionId[],
+  options?: PermissionCheckOptions
+): Promise<boolean>
+```
+
+**Example:**
+```typescript
+const canModify = await hasAnyPermission('user-123', [
+  'posts:update',
+  'posts:delete'
+]);
+```
+
+#### hasAllPermissions
+
+Check if user has all specified permissions.
+
+```typescript
+function hasAllPermissions(
+  userId: UserId,
+  permissionIds: PermissionId[],
+  options?: PermissionCheckOptions
+): Promise<boolean>
+```
+
+#### requirePermission
+
+Require user to have a permission (throws if unauthorized).
+
+```typescript
+function requirePermission(
+  userId: UserId,
+  permissionId: PermissionId,
+  options?: PermissionCheckOptions
+): Promise<void>
+```
+
+**Throws:** `InsufficientPermissionError` if user lacks permission
+
+**Example:**
+```typescript
+try {
+  await requirePermission('user-123', 'posts:delete');
+  // User is authorized
+} catch (error) {
+  if (error instanceof InsufficientPermissionError) {
+    console.error('Access denied:', error.code); // 'INSUFFICIENT_PERMISSION'
+  }
+}
+```
+
+#### requireRole
+
+Require user to have a role (throws if unauthorized).
+
+```typescript
+function requireRole(
+  userId: UserId,
+  roleId: RoleId,
+  scope?: string
+): Promise<void>
+```
+
+**Throws:** `InsufficientRoleError` if user lacks role
+
+### Storage Adapters
+
+#### MemoryRBACStorage
+
+In-memory RBAC storage implementation.
+
+```typescript
+class MemoryRBACStorage implements RBACStorageAdapter {
+  constructor();
+  
+  // Implements all RBACStorageAdapter methods
+  getRole(roleId: RoleId): Promise<Role | null>;
+  saveRole(role: Role): Promise<void>;
+  deleteRole(roleId: RoleId): Promise<void>;
+  listRoles(): Promise<Role[]>;
+  
+  getPermission(permissionId: PermissionId): Promise<Permission | null>;
+  savePermission(permission: Permission): Promise<void>;
+  deletePermission(permissionId: PermissionId): Promise<void>;
+  listPermissions(): Promise<Permission[]>;
+  
+  getUserRoles(userId: UserId): Promise<UserRole[]>;
+  assignUserRole(assignment: UserRole): Promise<void>;
+  removeUserRole(userId: UserId, roleId: RoleId, scope?: string): Promise<void>;
+  listUsersByRole(roleId: RoleId): Promise<UserId[]>;
+}
+```
+
+**Example:**
+```typescript
+import { MemoryRBACStorage, setDefaultRBACStorage } from '@amtarc/auth-utils';
+
+const storage = new MemoryRBACStorage();
+setDefaultRBACStorage(storage);
+```
+
+#### RBACStorageAdapter
+
+Interface for custom RBAC storage implementations.
+
+```typescript
+interface RBACStorageAdapter {
+  // Role operations
+  getRole(roleId: RoleId): Promise<Role | null>;
+  saveRole(role: Role): Promise<void>;
+  deleteRole(roleId: RoleId): Promise<void>;
+  listRoles(): Promise<Role[]>;
+
+  // Permission operations
+  getPermission(permissionId: PermissionId): Promise<Permission | null>;
+  savePermission(permission: Permission): Promise<void>;
+  deletePermission(permissionId: PermissionId): Promise<void>;
+  listPermissions(): Promise<Permission[]>;
+
+  // User-role assignments
+  getUserRoles(userId: UserId): Promise<UserRole[]>;
+  assignUserRole(assignment: UserRole): Promise<void>;
+  removeUserRole(userId: UserId, roleId: RoleId, scope?: string): Promise<void>;
+  listUsersByRole(roleId: RoleId): Promise<UserId[]>;
+}
+```
+
+### Class-Based API (Advanced)
+
+For advanced use cases, manager classes provide more control.
+
+#### PermissionManager
+
+```typescript
+class PermissionManager {
+  constructor(options: { storage: RBACStorageAdapter });
+  
+  definePermission(permission: Omit<Permission, 'id'> & { id?: PermissionId }): Promise<Permission>;
+  definePermissions(permissions: Array<Omit<Permission, 'id'> & { id?: PermissionId }>): Promise<Permission[]>;
+  updatePermission(id: PermissionId, updates: Partial<Omit<Permission, 'id'>>): Promise<Permission>;
+  deletePermission(id: PermissionId): Promise<void>;
+  getPermission(id: PermissionId): Promise<Permission | null>;
+  listPermissions(): Promise<Permission[]>;
+}
+```
+
+#### RoleManager
+
+```typescript
+class RoleManager {
+  constructor(options: { storage: RBACStorageAdapter });
+  
+  defineRole(role: Omit<Role, 'id' | 'permissions'> & { id?: RoleId; permissions?: Set<PermissionId> | PermissionId[] }): Promise<Role>;
+  updateRole(id: RoleId, updates: Partial<Omit<Role, 'id' | 'permissions'>>): Promise<Role>;
+  deleteRole(id: RoleId): Promise<void>;
+  getRole(id: RoleId): Promise<Role | null>;
+  listRoles(): Promise<Role[]>;
+  
+  grantPermission(roleId: RoleId, permissionId: PermissionId): Promise<void>;
+  grantPermissions(roleId: RoleId, permissionIds: PermissionId[]): Promise<void>;
+  revokePermission(roleId: RoleId, permissionId: PermissionId): Promise<void>;
+  getRolePermissions(roleId: RoleId, options?: RoleOptions): Promise<Set<PermissionId>>;
+  
+  assignRole(userId: UserId, roleId: RoleId, options?: { expiresAt?: number; scope?: string; metadata?: Record<string, unknown> }): Promise<UserRole>;
+  removeRole(userId: UserId, roleId: RoleId, scope?: string): Promise<void>;
+  getUserRoles(userId: UserId): Promise<UserRole[]>;
+  
+  hasRole(userId: UserId, roleId: RoleId, scope?: string): Promise<boolean>;
+  hasAnyRole(userId: UserId, roleIds: RoleId[], scope?: string): Promise<boolean>;
+  hasAllRoles(userId: UserId, roleIds: RoleId[], scope?: string): Promise<boolean>;
+}
+```
+
+#### RoleHierarchy
+
+```typescript
+class RoleHierarchy {
+  constructor(storage: RBACStorageAdapter);
+  
+  validateHierarchy(): Promise<HierarchyValidation>;
+  getRoleDepth(roleId: RoleId): Promise<number>;
+  getAncestors(roleId: RoleId): Promise<Set<RoleId>>;
+  getDescendants(roleId: RoleId): Promise<Set<RoleId>>;
+  getAllPermissions(roleId: RoleId, maxDepth?: number): Promise<Set<PermissionId>>;
+}
+```
+
+**Types:**
+```typescript
+interface HierarchyValidation {
+  valid: boolean;
+  errors?: string[];
+  warnings?: string[];
+}
+```
+
+#### RBACGuards
+
+```typescript
+class RBACGuards {
+  constructor(options: {
+    roleManager: RoleManager;
+    throwOnFailure?: boolean;
+    defaultOptions?: PermissionCheckOptions;
+  });
+  
+  hasPermission(userId: UserId, permissionId: PermissionId, options?: PermissionCheckOptions): Promise<boolean>;
+  requirePermission(context: { userId: UserId; scope?: string }, permissionId: PermissionId, options?: PermissionCheckOptions): Promise<void>;
+  requireRole(context: { userId: UserId; scope?: string }, roleId: RoleId): Promise<void>;
+}
+```
+
+**Factory function:**
+```typescript
+function createRBACGuards(options: {
+  roleManager: RoleManager;
+  throwOnFailure?: boolean;
+  defaultOptions?: PermissionCheckOptions;
+}): RBACGuards
+```
+
+### Authorization Errors
+
+All authorization error classes extend `AuthorizationError`.
+
+#### AuthorizationError
+
+```typescript
+class AuthorizationError extends Error {
+  constructor(
+    message: string,
+    code: string,
+    context?: Record<string, unknown>
+  );
+  
+  readonly code: string;
+  readonly context?: Record<string, unknown>;
+}
+```
+
+#### InsufficientRoleError
+
+Thrown when user lacks required role.
+
+```typescript
+class InsufficientRoleError extends AuthorizationError {
+  constructor(required: string | string[], context?: Record<string, unknown>);
+  
+  readonly code: 'INSUFFICIENT_ROLE';
+}
+```
+
+#### InsufficientPermissionError
+
+Thrown when user lacks required permission.
+
+```typescript
+class InsufficientPermissionError extends AuthorizationError {
+  constructor(required: string | string[], context?: Record<string, unknown>);
+  
+  readonly code: 'INSUFFICIENT_PERMISSION';
+}
+```
+
+#### RoleNotFoundError
+
+Thrown when a role doesn't exist.
+
+```typescript
+class RoleNotFoundError extends AuthorizationError {
+  constructor(roleId: string, context?: Record<string, unknown>);
+  
+  readonly code: 'ROLE_NOT_FOUND';
+}
+```
+
+#### PermissionNotFoundError
+
+Thrown when a permission doesn't exist.
+
+```typescript
+class PermissionNotFoundError extends AuthorizationError {
+  constructor(permissionId: string, context?: Record<string, unknown>);
+  
+  readonly code: 'PERMISSION_NOT_FOUND';
+}
+```
+
+#### RoleExistsError
+
+Thrown when attempting to create duplicate role.
+
+```typescript
+class RoleExistsError extends AuthorizationError {
+  constructor(roleId: string, context?: Record<string, unknown>);
+  
+  readonly code: 'ROLE_EXISTS';
+}
+```
+
+#### PermissionExistsError
+
+Thrown when attempting to create duplicate permission.
+
+```typescript
+class PermissionExistsError extends AuthorizationError {
+  constructor(permissionId: string, context?: Record<string, unknown>);
+  
+  readonly code: 'PERMISSION_EXISTS';
+}
+```
+
+#### ResourceAccessDeniedError
+
+Thrown when access to a resource is denied.
+
+```typescript
+class ResourceAccessDeniedError extends AuthorizationError {
+  constructor(
+    resourceId: ResourceId,
+    action: string,
+    context?: Record<string, unknown>
+  );
+  
+  readonly code: 'RESOURCE_ACCESS_DENIED';
+}
+```
+
+**Import authorization errors:**
+```typescript
+import {
+  InsufficientRoleError,
+  InsufficientPermissionError,
+  RoleNotFoundError,
+  PermissionNotFoundError,
+  RoleExistsError,
+  PermissionExistsError,
+  ResourceAccessDeniedError
+} from '@amtarc/auth-utils/authorization/types';
+```
+
+---
+
 ## Guards & Route Protection
 
 ### requireAuth

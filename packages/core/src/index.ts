@@ -11,5 +11,6 @@ export * from './cookies';
 export * from './errors';
 export * from './security';
 export * from './storage';
+export * from './authorization';
 
 export const VERSION = '1.2.0';

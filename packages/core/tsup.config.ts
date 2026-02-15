@@ -13,6 +13,8 @@ export default defineConfig({
     'src/security/rate-limit/index.ts',
     'src/security/headers/index.ts',
     'src/security/encryption/index.ts',
+    'src/authorization/index.ts',
+    'src/authorization/rbac/index.ts',
   ],
   format: ['esm', 'cjs'],
   dts: true,

@@ -32,6 +32,7 @@ export default defineConfig({
           text: 'Core Concepts',
           items: [
             { text: 'Session Management', link: '/guide/sessions' },
+            { text: 'Authorization & RBAC', link: '/guide/authorization' },
             { text: 'Guards & Middleware', link: '/guide/guards' },
             { text: 'Cookies', link: '/guide/cookies' },
             { text: 'Error Handling', link: '/guide/errors' },

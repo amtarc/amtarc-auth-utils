@@ -137,22 +137,6 @@ Follow the prompts to describe your changes. This will be used for automatic ver
 5. Push your branch and create a Pull Request on GitHub
 6. Wait for review and address any feedback
 
-## Project Structure
-
-```
-amtarc-auth-utils/
-├── packages/
-│   ├── core/              # Core session management
-│   ├── security/          # Security utilities
-│   ├── authorization/     # RBAC, ABAC, permissions
-│   ├── tokens/            # JWT and token management
-│   ├── multi-tenancy/     # Multi-tenant utilities
-│   ├── audit/             # Audit logging
-│   ├── testing/           # Testing utilities
-│   └── observability/     # Metrics and monitoring
-├── examples/              # Example applications
-└── docs/                  # Documentation
-```
 
 ## Writing Tests
 

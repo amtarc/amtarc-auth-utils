@@ -17,8 +17,8 @@
 
 ## Packages
 
-### Core Package (v1.2.0 - Available)
-**[`@amtarc/auth-utils`](./packages/core)** - Complete authentication and security utilities
+### Core Package (v1.3.0 - Available)
+**[`@amtarc/auth-utils`](./packages/core)** 
 
 **Session Management:**
 - Session creation, validation, and refresh
@@ -50,8 +50,18 @@
 - Secure random generation (tokens, UUIDs, strings)
 - Universal storage adapter for all modules
 
+**Authorization (Phase 4 - v1.3.0):**
+- RBAC (Role-Based Access Control) with permission inheritance
+- Role hierarchy with parent/child relationships
+- Scoped role assignments (multi-tenant, organization, team)
+- Permission and role management with CRUD operations
+- User-role assignments with expiration support
+- Authorization guards (`requirePermission`, `requireRole`)
+- Functional API (no class instantiation required)
+- Memory storage adapter + custom adapter support
+
 **Error Handling:**
-- 17+ specialized error classes with HTTP status codes
+- 25+ specialized error classes with HTTP status codes
 - Type guards for error classification
 - JSON serialization for API responses
 - Operational vs programmer error distinction
@@ -64,52 +74,6 @@
 - [`@amtarc/auth-utils-testing`](./packages/testing) - Testing utilities and mocks
 - [`@amtarc/auth-utils-observability`](./packages/observability) - Metrics and monitoring
 
-## Quick Start
-
-```bash
-npm install @amtarc/auth-utils
-# or
-pnpm add @amtarc/auth-utils
-```
-
-```typescript
-import { createSession } from '@amtarc/auth-utils';
-import { requireAuth } from '@amtarc/auth-utils/guards';
-import { createAuthCookie, signCookie } from '@amtarc/auth-utils/cookies';
-import { MemoryStorageAdapter } from '@amtarc/auth-utils/session';
-
-// Setup storage
-const storage = new MemoryStorageAdapter();
-
-// Create a session
-const session = createSession('user-123', {
-  expiresIn: 1000 * 60 * 60 * 24, // 24 hours
-  idleTimeout: 1000 * 60 * 30, // 30 minutes
-});
-
-// Store session
-await storage.set(session.sessionId, session);
-
-// Create signed cookie
-const signedValue = signCookie(session.sessionId, 'your-secret-key');
-const cookie = createAuthCookie('session', signedValue, {
-  httpOnly: true,
-  secure: true,
-  sameSite: 'strict',
-});
-
-// Protect a route (framework-agnostic)
-const guard = requireAuth();
-const result = guard({
-  session,
-  request: { url: '/dashboard' },
-  response: {},
-});
-
-if (result.authorized) {
-  console.log('User:', session.userId);
-}
-```
 
 ## Documentation
 
@@ -129,10 +93,13 @@ Unlike full authentication frameworks, `@amtarc/auth-utils` provides **focused u
 |---------|-------------------|---------------------|
 | **Purpose** | Security utilities | Complete auth flow |
 | **Flexibility** | Mix & match modules | All-in-one solution |
-| **Bundle Size** | ~10.6KB (tree-shakeable) | Often 50KB+ |
-| **CSRF Protection** | ✅ Built-in | Varies |
-| **Rate Limiting** | ✅ 4 algorithms | Often missing |
-| **Encryption** | ✅ AES-256-GCM | Varies |
+| **Bundle Size** | ~12KB (tree-shakeable) | Often 50KB+ |
+| **CSRF Protection** | Built-in | Varies |
+| **Rate Limiting** | 4 algorithms | Often missing |
+| **Encryption** | AES-256-GCM | Varies |
+| **RBAC Authorization** | Built-in | Varies |
+| **Role Hierarchy** | Built-in | Often missing |
+| **Permission System** | Granular | Varies |
 | **Framework Support** | Truly agnostic | Framework-specific |
 | **Multi-device Sessions** | Built-in | Often missing |
 | **Session Fingerprinting** | Built-in | Often missing |
@@ -159,48 +126,22 @@ pnpm install
 # Build all packages
 pnpm build
 
-# Run tests (400+ tests, >95% coverage)
+# Run tests (661 tests, >95% coverage)
 pnpm test
 
 # Run linting
 pnpm lint
 ```
 
-### Project Structure
-
-```
-@amtarc/auth-utils/
-├── packages/
-│   ├── core/                   # Core utilities (v1.2.0)
-│   │   ├── session/           # Session management
-│   │   ├── guards/            # Route protection
-│   │   ├── cookies/           # Cookie utilities
-│   │   ├── errors/            # Error handling
-│   │   ├── security/          # CSRF, rate limiting, headers, encryption
-│   │   │   ├── csrf/          # CSRF protection
-│   │   │   ├── rate-limit/    # Rate limiting algorithms
-│   │   │   ├── headers/       # Security headers
-│   │   │   └── encryption/    # AES-256-GCM encryption
-│   │   └── storage/           # Universal storage adapter
-│   ├── authorization/         # Coming soon
-│   ├── tokens/               # Coming soon
-│   └── ...
-├── examples/
-│   ├── nextjs-app/           # Next.js example
-│   ├── express-api/          # Express example
-│   └── saas-starter/         # SaaS starter
-├── docs/                     # Documentation site
-└── requirements/             # Implementation plans
-```
 
 ## Stats
 
-**Core Package (v1.2.0):**
-- Bundle Size: ~10.6 KB (gzipped, tree-shakeable)
-- Tests: 400+ passing (100% pass rate)
+**Core Package (v1.3.0):**
+- Bundle Size: ~12 KB (gzipped, tree-shakeable)
+- Tests: 661 passing (100% pass rate)
 - Coverage: >95%
 - TypeScript: Strict mode + exactOptionalPropertyTypes
-- Build Time: <500ms
+- Build Time: <1s (ESM + CJS + DTS)
 - Zero runtime dependencies (Node.js crypto only)
 
 ## Contributing
