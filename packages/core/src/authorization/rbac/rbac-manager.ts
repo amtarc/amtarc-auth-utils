@@ -24,11 +24,22 @@ import { RBACGuards } from './rbac-guards';
 let defaultStorage: RBACStorageAdapter | null = null;
 
 /**
+ * Cached manager instances (recreated when storage changes)
+ */
+let cachedPermissionManager: PermissionManager | null = null;
+let cachedRoleManager: RoleManager | null = null;
+let cachedGuards: RBACGuards | null = null;
+
+/**
  * Set the default storage adapter for functional RBAC operations
  * Call this once at app initialization
  */
 export function setDefaultRBACStorage(storage: RBACStorageAdapter): void {
   defaultStorage = storage;
+  // Clear cached instances when storage changes
+  cachedPermissionManager = null;
+  cachedRoleManager = null;
+  cachedGuards = null;
 }
 
 /**
@@ -43,6 +54,36 @@ function getStorage(): RBACStorageAdapter {
   return defaultStorage;
 }
 
+/**
+ * Get cached PermissionManager instance
+ */
+function getPermissionManager(): PermissionManager {
+  if (!cachedPermissionManager) {
+    cachedPermissionManager = new PermissionManager({ storage: getStorage() });
+  }
+  return cachedPermissionManager;
+}
+
+/**
+ * Get cached RoleManager instance
+ */
+function getRoleManager(): RoleManager {
+  if (!cachedRoleManager) {
+    cachedRoleManager = new RoleManager({ storage: getStorage() });
+  }
+  return cachedRoleManager;
+}
+
+/**
+ * Get cached RBACGuards instance
+ */
+function getGuards(): RBACGuards {
+  if (!cachedGuards) {
+    cachedGuards = new RBACGuards({ roleManager: getRoleManager() });
+  }
+  return cachedGuards;
+}
+
 // =============================================================================
 // Permission Management Functions
 // =============================================================================
@@ -53,8 +94,7 @@ function getStorage(): RBACStorageAdapter {
 export async function definePermission(
   permission: Omit<Permission, 'id'> & { id?: PermissionId }
 ): Promise<Permission> {
-  const manager = new PermissionManager({ storage: getStorage() });
-  return manager.definePermission(permission);
+  return getPermissionManager().definePermission(permission);
 }
 
 /**
@@ -63,8 +103,7 @@ export async function definePermission(
 export async function definePermissions(
   permissions: Array<Omit<Permission, 'id'> & { id?: PermissionId }>
 ): Promise<Permission[]> {
-  const manager = new PermissionManager({ storage: getStorage() });
-  return manager.definePermissions(permissions);
+  return getPermissionManager().definePermissions(permissions);
 }
 
 /**
@@ -74,16 +113,14 @@ export async function updatePermission(
   id: PermissionId,
   updates: Partial<Omit<Permission, 'id'>>
 ): Promise<Permission> {
-  const manager = new PermissionManager({ storage: getStorage() });
-  return manager.updatePermission(id, updates);
+  return getPermissionManager().updatePermission(id, updates);
 }
 
 /**
  * Delete a permission
  */
 export async function deletePermission(id: PermissionId): Promise<void> {
-  const manager = new PermissionManager({ storage: getStorage() });
-  return manager.deletePermission(id);
+  return getPermissionManager().deletePermission(id);
 }
 
 /**
@@ -92,16 +129,14 @@ export async function deletePermission(id: PermissionId): Promise<void> {
 export async function getPermission(
   id: PermissionId
 ): Promise<Permission | null> {
-  const manager = new PermissionManager({ storage: getStorage() });
-  return manager.getPermission(id);
+  return getPermissionManager().getPermission(id);
 }
 
 /**
  * List all permissions
  */
 export async function listPermissions(): Promise<Permission[]> {
-  const manager = new PermissionManager({ storage: getStorage() });
-  return manager.listPermissions();
+  return getPermissionManager().listPermissions();
 }
 
 // =============================================================================
@@ -117,8 +152,7 @@ export async function defineRole(
     parents?: string[];
   }
 ): Promise<Role> {
-  const manager = new RoleManager({ storage: getStorage() });
-  return manager.defineRole(role);
+  return getRoleManager().defineRole(role);
 }
 
 /**
@@ -131,32 +165,28 @@ export async function updateRole(
     parents?: string[];
   }
 ): Promise<Role> {
-  const manager = new RoleManager({ storage: getStorage() });
-  return manager.updateRole(id, updates);
+  return getRoleManager().updateRole(id, updates);
 }
 
 /**
  * Delete a role
  */
 export async function deleteRole(id: RoleId): Promise<void> {
-  const manager = new RoleManager({ storage: getStorage() });
-  return manager.deleteRole(id);
+  return getRoleManager().deleteRole(id);
 }
 
 /**
  * Get role by ID
  */
 export async function getRole(id: RoleId): Promise<Role | null> {
-  const manager = new RoleManager({ storage: getStorage() });
-  return manager.getRole(id);
+  return getRoleManager().getRole(id);
 }
 
 /**
  * List all roles
  */
 export async function listRoles(): Promise<Role[]> {
-  const manager = new RoleManager({ storage: getStorage() });
-  return manager.listRoles();
+  return getRoleManager().listRoles();
 }
 
 /**
@@ -166,8 +196,7 @@ export async function grantPermission(
   roleId: RoleId,
   permissionId: PermissionId
 ): Promise<void> {
-  const manager = new RoleManager({ storage: getStorage() });
-  return manager.grantPermission(roleId, permissionId);
+  return getRoleManager().grantPermission(roleId, permissionId);
 }
 
 /**
@@ -177,8 +206,7 @@ export async function grantPermissions(
   roleId: RoleId,
   permissionIds: PermissionId[]
 ): Promise<void> {
-  const manager = new RoleManager({ storage: getStorage() });
-  return manager.grantPermissions(roleId, permissionIds);
+  return getRoleManager().grantPermissions(roleId, permissionIds);
 }
 
 /**
@@ -188,8 +216,7 @@ export async function revokePermission(
   roleId: RoleId,
   permissionId: PermissionId
 ): Promise<void> {
-  const manager = new RoleManager({ storage: getStorage() });
-  return manager.revokePermission(roleId, permissionId);
+  return getRoleManager().revokePermission(roleId, permissionId);
 }
 
 /**
@@ -199,8 +226,7 @@ export async function getRolePermissions(
   roleId: RoleId,
   options?: RoleOptions
 ): Promise<Set<PermissionId>> {
-  const manager = new RoleManager({ storage: getStorage() });
-  return manager.getRolePermissions(roleId, options);
+  return getRoleManager().getRolePermissions(roleId, options);
 }
 
 // =============================================================================
@@ -219,8 +245,7 @@ export async function assignRole(
     metadata?: Record<string, unknown>;
   }
 ): Promise<void> {
-  const manager = new RoleManager({ storage: getStorage() });
-  return manager.assignRole(userId, roleId, options);
+  return getRoleManager().assignRole(userId, roleId, options);
 }
 
 /**
@@ -231,8 +256,7 @@ export async function removeRole(
   roleId: RoleId,
   scope?: string
 ): Promise<void> {
-  const manager = new RoleManager({ storage: getStorage() });
-  return manager.removeRole(userId, roleId, scope);
+  return getRoleManager().removeRole(userId, roleId, scope);
 }
 
 /**
@@ -243,8 +267,7 @@ export async function hasRole(
   roleId: RoleId,
   scope?: string
 ): Promise<boolean> {
-  const manager = new RoleManager({ storage: getStorage() });
-  return manager.hasRole(userId, roleId, scope);
+  return getRoleManager().hasRole(userId, roleId, scope);
 }
 
 /**
@@ -255,8 +278,7 @@ export async function hasAnyRole(
   roleIds: RoleId[],
   scope?: string
 ): Promise<boolean> {
-  const manager = new RoleManager({ storage: getStorage() });
-  return manager.hasAnyRole(userId, roleIds, scope);
+  return getRoleManager().hasAnyRole(userId, roleIds, scope);
 }
 
 /**
@@ -267,16 +289,14 @@ export async function hasAllRoles(
   roleIds: RoleId[],
   scope?: string
 ): Promise<boolean> {
-  const manager = new RoleManager({ storage: getStorage() });
-  return manager.hasAllRoles(userId, roleIds, scope);
+  return getRoleManager().hasAllRoles(userId, roleIds, scope);
 }
 
 /**
  * Get all role assignments for a user
  */
 export async function getUserRoles(userId: UserId): Promise<UserRole[]> {
-  const manager = new RoleManager({ storage: getStorage() });
-  return manager.getUserRoles(userId);
+  return getRoleManager().getUserRoles(userId);
 }
 
 // =============================================================================
@@ -291,12 +311,7 @@ export async function hasPermission(
   permissionId: PermissionId,
   options?: PermissionCheckOptions
 ): Promise<boolean> {
-  const manager = new RoleManager({ storage: getStorage() });
-  const guards = new RBACGuards({
-    roleManager: manager,
-    throwOnFailure: false,
-  });
-  return guards.hasPermission(userId, permissionId, options);
+  return getGuards().hasPermission(userId, permissionId, options);
 }
 
 /**
@@ -307,11 +322,7 @@ export async function hasAnyPermission(
   permissionIds: PermissionId[],
   options?: PermissionCheckOptions
 ): Promise<boolean> {
-  const manager = new RoleManager({ storage: getStorage() });
-  const guards = new RBACGuards({
-    roleManager: manager,
-    throwOnFailure: false,
-  });
+  const guards = getGuards();
 
   for (const permissionId of permissionIds) {
     const has = await guards.hasPermission(userId, permissionId, options);
@@ -328,11 +339,7 @@ export async function hasAllPermissions(
   permissionIds: PermissionId[],
   options?: PermissionCheckOptions
 ): Promise<boolean> {
-  const manager = new RoleManager({ storage: getStorage() });
-  const guards = new RBACGuards({
-    roleManager: manager,
-    throwOnFailure: false,
-  });
+  const guards = getGuards();
 
   for (const permissionId of permissionIds) {
     const has = await guards.hasPermission(userId, permissionId, options);
@@ -349,14 +356,13 @@ export async function requirePermission(
   permissionId: PermissionId,
   options?: PermissionCheckOptions
 ): Promise<void> {
-  const manager = new RoleManager({ storage: getStorage() });
-  const guards = new RBACGuards({ roleManager: manager });
-
   const context = {
     userId,
     ...(options?.scope !== undefined && { scope: options.scope }),
   };
 
+  // Create a throwing guards instance for requirePermission
+  const guards = new RBACGuards({ roleManager: getRoleManager() });
   await guards.requirePermission(context, permissionId, options);
 }
 
@@ -368,13 +374,12 @@ export async function requireRole(
   roleId: RoleId,
   scope?: string
 ): Promise<void> {
-  const manager = new RoleManager({ storage: getStorage() });
-  const guards = new RBACGuards({ roleManager: manager });
-
   const context = {
     userId,
     ...(scope !== undefined && { scope }),
   };
 
+  // Create a throwing guards instance for requireRole
+  const guards = new RBACGuards({ roleManager: getRoleManager() });
   await guards.requireRole(context, roleId);
 }

@@ -447,10 +447,13 @@ const hasAccess = await guards.hasPermission('user-123', 'posts:delete');
 
 The RBAC module provides specialized error classes for authorization failures.
 
+**Note:** RBAC errors extend `RBACAuthorizationError` (not `AuthorizationError`) to avoid conflicts with the main `AuthorizationError` class in `@amtarc/auth-utils/errors`. All RBAC-specific error classes should be imported from `@amtarc/auth-utils/authorization/types`.
+
 ### Error Types
 
 ```typescript
 import {
+  RBACAuthorizationError,
   InsufficientRoleError,
   InsufficientPermissionError,
   RoleNotFoundError,

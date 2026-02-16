@@ -16,7 +16,7 @@ export type {
 // Export RBAC module (includes functional API)
 export * from './rbac';
 
-// Note: Authorization error classes (AuthorizationError, InsufficientRoleError, etc.)
+// Note: RBAC error classes (RBACAuthorizationError, InsufficientRoleError, etc.)
 // are available in ./authorization/types but not re-exported here to avoid conflicts
 // with the main ./errors module. Import directly from '@amtarc/auth-utils/authorization/types'
 // if you need these specific error classes for RBAC/authorization.
