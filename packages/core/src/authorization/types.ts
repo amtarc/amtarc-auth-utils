@@ -53,23 +53,25 @@ export interface AuthorizationContext {
 }
 
 /**
- * Base error class for authorization errors
+ * Base error class for RBAC authorization errors
+ * Named RBACAuthorizationError to avoid conflict with the existing
+ * AuthorizationError in @amtarc/auth-utils/errors
  */
-export class AuthorizationError extends Error {
+export class RBACAuthorizationError extends Error {
   constructor(
     message: string,
     public readonly code: string,
     public readonly context?: Record<string, unknown>
   ) {
     super(message);
-    this.name = 'AuthorizationError';
+    this.name = 'RBACAuthorizationError';
   }
 }
 
 /**
  * Error thrown when user lacks required role
  */
-export class InsufficientRoleError extends AuthorizationError {
+export class InsufficientRoleError extends RBACAuthorizationError {
   constructor(required: string | string[], context?: Record<string, unknown>) {
     super(
       `Missing required role(s): ${Array.isArray(required) ? required.join(', ') : required}`,
@@ -83,7 +85,7 @@ export class InsufficientRoleError extends AuthorizationError {
 /**
  * Error thrown when user lacks required permission
  */
-export class InsufficientPermissionError extends AuthorizationError {
+export class InsufficientPermissionError extends RBACAuthorizationError {
   constructor(required: string | string[], context?: Record<string, unknown>) {
     super(
       `Missing required permission(s): ${Array.isArray(required) ? required.join(', ') : required}`,
@@ -97,7 +99,7 @@ export class InsufficientPermissionError extends AuthorizationError {
 /**
  * Error thrown when access to resource is denied
  */
-export class ResourceAccessDeniedError extends AuthorizationError {
+export class ResourceAccessDeniedError extends RBACAuthorizationError {
   constructor(
     resourceId: ResourceId,
     action: string,
@@ -115,7 +117,7 @@ export class ResourceAccessDeniedError extends AuthorizationError {
 /**
  * Error thrown when a role is not found
  */
-export class RoleNotFoundError extends AuthorizationError {
+export class RoleNotFoundError extends RBACAuthorizationError {
   constructor(roleId: string, context?: Record<string, unknown>) {
     super(`Role not found: ${roleId}`, 'ROLE_NOT_FOUND', context);
     this.name = 'RoleNotFoundError';
@@ -125,7 +127,7 @@ export class RoleNotFoundError extends AuthorizationError {
 /**
  * Error thrown when a permission is not found
  */
-export class PermissionNotFoundError extends AuthorizationError {
+export class PermissionNotFoundError extends RBACAuthorizationError {
   constructor(permissionId: string, context?: Record<string, unknown>) {
     super(
       `Permission not found: ${permissionId}`,
@@ -139,7 +141,7 @@ export class PermissionNotFoundError extends AuthorizationError {
 /**
  * Error thrown when attempting to create a role that already exists
  */
-export class RoleExistsError extends AuthorizationError {
+export class RoleExistsError extends RBACAuthorizationError {
   constructor(roleId: string, context?: Record<string, unknown>) {
     super(`Role already exists: ${roleId}`, 'ROLE_EXISTS', context);
     this.name = 'RoleExistsError';
@@ -149,7 +151,7 @@ export class RoleExistsError extends AuthorizationError {
 /**
  * Error thrown when attempting to create a permission that already exists
  */
-export class PermissionExistsError extends AuthorizationError {
+export class PermissionExistsError extends RBACAuthorizationError {
   constructor(permissionId: string, context?: Record<string, unknown>) {
     super(
       `Permission already exists: ${permissionId}`,

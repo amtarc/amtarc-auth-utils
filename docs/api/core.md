@@ -737,7 +737,6 @@ function getRolePermissions(
 interface RoleOptions {
   includeInherited?: boolean; // Include permissions from parent roles
   maxDepth?: number;          // Max hierarchy depth to traverse
-  checkExpiration?: boolean;  // Check role assignment expiration
 }
 ```
 
@@ -1139,14 +1138,16 @@ function createRBACGuards(options: {
 }): RBACGuards
 ```
 
-### Authorization Errors
+### RBAC Authorization Errors
 
-All authorization error classes extend `AuthorizationError`.
+All RBAC authorization error classes extend `RBACAuthorizationError`.
 
-#### AuthorizationError
+**Note:** These errors are named `RBACAuthorizationError` (not `AuthorizationError`) to avoid conflicts with the main `AuthorizationError` class in `@amtarc/auth-utils/errors`. Import these from `@amtarc/auth-utils/authorization/types`.
+
+#### RBACAuthorizationError
 
 ```typescript
-class AuthorizationError extends Error {
+class RBACAuthorizationError extends Error {
   constructor(
     message: string,
     code: string,
@@ -1163,7 +1164,7 @@ class AuthorizationError extends Error {
 Thrown when user lacks required role.
 
 ```typescript
-class InsufficientRoleError extends AuthorizationError {
+class InsufficientRoleError extends RBACAuthorizationError {
   constructor(required: string | string[], context?: Record<string, unknown>);
   
   readonly code: 'INSUFFICIENT_ROLE';
@@ -1175,7 +1176,7 @@ class InsufficientRoleError extends AuthorizationError {
 Thrown when user lacks required permission.
 
 ```typescript
-class InsufficientPermissionError extends AuthorizationError {
+class InsufficientPermissionError extends RBACAuthorizationError {
   constructor(required: string | string[], context?: Record<string, unknown>);
   
   readonly code: 'INSUFFICIENT_PERMISSION';
@@ -1187,7 +1188,7 @@ class InsufficientPermissionError extends AuthorizationError {
 Thrown when a role doesn't exist.
 
 ```typescript
-class RoleNotFoundError extends AuthorizationError {
+class RoleNotFoundError extends RBACAuthorizationError {
   constructor(roleId: string, context?: Record<string, unknown>);
   
   readonly code: 'ROLE_NOT_FOUND';
@@ -1199,7 +1200,7 @@ class RoleNotFoundError extends AuthorizationError {
 Thrown when a permission doesn't exist.
 
 ```typescript
-class PermissionNotFoundError extends AuthorizationError {
+class PermissionNotFoundError extends RBACAuthorizationError {
   constructor(permissionId: string, context?: Record<string, unknown>);
   
   readonly code: 'PERMISSION_NOT_FOUND';
@@ -1211,7 +1212,7 @@ class PermissionNotFoundError extends AuthorizationError {
 Thrown when attempting to create duplicate role.
 
 ```typescript
-class RoleExistsError extends AuthorizationError {
+class RoleExistsError extends RBACAuthorizationError {
   constructor(roleId: string, context?: Record<string, unknown>);
   
   readonly code: 'ROLE_EXISTS';
@@ -1223,7 +1224,7 @@ class RoleExistsError extends AuthorizationError {
 Thrown when attempting to create duplicate permission.
 
 ```typescript
-class PermissionExistsError extends AuthorizationError {
+class PermissionExistsError extends RBACAuthorizationError {
   constructor(permissionId: string, context?: Record<string, unknown>);
   
   readonly code: 'PERMISSION_EXISTS';
@@ -1235,7 +1236,7 @@ class PermissionExistsError extends AuthorizationError {
 Thrown when access to a resource is denied.
 
 ```typescript
-class ResourceAccessDeniedError extends AuthorizationError {
+class ResourceAccessDeniedError extends RBACAuthorizationError {
   constructor(
     resourceId: ResourceId,
     action: string,

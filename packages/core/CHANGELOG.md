@@ -5,6 +5,34 @@ All notable changes to `@amtarc/auth-utils` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2026-02-16
+
+### Fixed
+- **Breaking:** Renamed `AuthorizationError` to `RBACAuthorizationError` to avoid naming conflicts with the main `AuthorizationError` class in `@amtarc/auth-utils/errors`
+  - All RBAC-specific error classes now extend `RBACAuthorizationError`
+  - Updated imports: use `RBACAuthorizationError` from `@amtarc/auth-utils/authorization/types`
+- Fixed reverse index bugs in `MemoryRBACStorage` that could cause incorrect user role lookups
+- Removed non-existent `checkExpiration` option from documentation
+
+### Changed
+- Optimized RBAC functional API performance with manager instance caching
+  - Eliminates repeated object allocations in `rbac-manager.ts` functions
+  - Cached instances: `cachedPermissionManager`, `cachedRoleManager`, `cachedGuards`
+  - Automatic cache invalidation when default storage changes
+
+### Added
+- Comprehensive test coverage for RBAC error classes (8 new tests, 669 total)
+  - `RoleNotFoundError` (2 tests)
+  - `PermissionNotFoundError` (2 tests)
+  - `RoleExistsError` (2 tests)
+  - `PermissionExistsError` (2 tests)
+- Added `@amtarc/auth-utils/authorization/types` subpath export for type-only imports
+
+### Documentation
+- Updated API reference with `RBACAuthorizationError` naming convention
+- Added explanatory note in authorization guide about naming conflict avoidance
+- Synchronized all error class documentation with implementation
+
 ## [1.3.0] - 2026-02-15
 
 ### Added
