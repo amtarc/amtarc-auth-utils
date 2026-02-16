@@ -102,6 +102,25 @@ throw new CookieDecryptionError('Failed to decrypt cookie');
 // Status: 400
 ```
 
+### Security Errors
+
+Errors related to security features:
+
+```typescript
+import {
+  CSRFError,
+  RateLimitError  
+} from '@amtarc/auth-utils/errors';
+
+// CSRF validation failed
+throw new CSRFError('CSRF token validation failed');
+// Status: 403
+
+// Rate limit exceeded
+throw new RateLimitError('Too many requests - please try again later');
+// Status: 429
+```
+
 ### Token Errors
 
 Errors related to token handling:
@@ -641,6 +660,8 @@ app.listen(3000);
 | `InvalidCookieError` | `INVALID_COOKIE` | 400 | Cookie format invalid |
 | `CookieSignatureMismatchError` | `COOKIE_SIGNATURE_MISMATCH` | 401 | Cookie signature invalid |
 | `CookieDecryptionError` | `COOKIE_DECRYPTION_ERROR` | 400 | Decryption failed |
+| `CSRFError` | `CSRF_ERROR` | 403 | CSRF validation failed |
+| `RateLimitError` | `RATE_LIMIT_EXCEEDED` | 429 | Rate limit exceeded |
 | `InvalidTokenError` | `INVALID_TOKEN` | 401 | Token format invalid |
 | `TokenExpiredError` | `TOKEN_EXPIRED` | 401 | Token has expired |
 | `TokenRevokedError` | `TOKEN_REVOKED` | 401 | Token was revoked |

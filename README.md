@@ -17,21 +17,23 @@
 
 ## Packages
 
-### Core Package (v1.3.0 - Available)
+### Core Package (v1.4.0 - Available)
 **[`@amtarc/auth-utils`](./packages/core)** 
 
 **Session Management:**
 - Session creation, validation, and refresh
-- Multi-device session support with tracking
+- Multi-device session support (`listUserSessions`, `revokeDeviceSession`, `findSessionByDevice`)
 - Session fingerprinting for device identification
+- Concurrent session limits with automatic enforcement
+- Session invalidation (single device, all devices, all except current)
 - Storage adapter pattern (Memory + custom)
 - Session ID rotation for security
-- Concurrent session limits
 
 **Guards & Route Protection:**
 - Authentication guards (`requireAuth`, `requireGuest`)
 - Composable guard system (`requireAny`, `requireAll`)
-- Redirect management with open redirect prevention
+- Redirect management (`saveAuthRedirect`, `restoreAuthRedirect`, `peekAuthRedirect`, `clearAuthRedirect`, `isValidRedirect`)
+- Open redirect prevention with domain validation
 - Framework-agnostic design
 
 **Cookie Management:**
@@ -41,7 +43,7 @@
 - Cookie rotation and deletion utilities
 - Secure defaults (HttpOnly, Secure, SameSite)
 
-**Security (Phase 3 - v1.2.0):**
+**Security:**
 - CSRF protection (double-submit & synchronizer patterns)
 - Rate limiting (token bucket, fixed window, sliding window algorithms)
 - Brute-force protection with progressive delays and lockout
@@ -50,14 +52,21 @@
 - Secure random generation (tokens, UUIDs, strings)
 - Universal storage adapter for all modules
 
-**Authorization (Phase 4 - v1.3.0):**
-- RBAC (Role-Based Access Control) with permission inheritance
-- Role hierarchy with parent/child relationships
-- Scoped role assignments (multi-tenant, organization, team)
-- Permission and role management with CRUD operations
-- User-role assignments with expiration support
-- Authorization guards (`requirePermission`, `requireRole`)
-- Functional API (no class instantiation required)
+**Authorization:**
+- **RBAC** (Role-Based Access Control) with permission inheritance
+  - Role hierarchy with parent/child relationships (up to 10 levels)
+  - Scoped role assignments (tenant, organization, project)
+  - Permission and role management with auto-ID generation
+  - User-role assignments with expiration support
+- **ABAC** (Attribute-Based Access Control) with policy engine
+  - Policy evaluation with user attributes and context
+  - Time-based policies and custom conditions
+  - Policy combining algorithms (permit-overrides, deny-overrides)
+- **Resource-based Access Control**
+  - Grant/revoke access to specific resources
+  - Resource ownership and access level management
+  - Resource metadata and hierarchical permissions
+- Authorization guards (`requirePermission`, `requireRole`, `requirePolicy`)
 - Memory storage adapter + custom adapter support
 
 **Error Handling:**
@@ -98,6 +107,8 @@ Unlike full authentication frameworks, `@amtarc/auth-utils` provides **focused u
 | **Rate Limiting** | 4 algorithms | Often missing |
 | **Encryption** | AES-256-GCM | Varies |
 | **RBAC Authorization** | Built-in | Varies |
+| **ABAC Authorization** | Built-in | Often missing |
+| **Resource-based Access** | Built-in | Often missing |
 | **Role Hierarchy** | Built-in | Often missing |
 | **Permission System** | Granular | Varies |
 | **Framework Support** | Truly agnostic | Framework-specific |
@@ -136,7 +147,7 @@ pnpm lint
 
 ## Stats
 
-**Core Package (v1.3.0):**
+**Core Package (v1.4.0):**
 - Bundle Size: ~12 KB (gzipped, tree-shakeable)
 - Tests: 661 passing (100% pass rate)
 - Coverage: >95%

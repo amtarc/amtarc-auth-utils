@@ -32,10 +32,21 @@ export default defineConfig({
           text: 'Core Concepts',
           items: [
             { text: 'Session Management', link: '/guide/sessions' },
-            { text: 'Authorization & RBAC', link: '/guide/authorization' },
             { text: 'Guards & Middleware', link: '/guide/guards' },
             { text: 'Cookies', link: '/guide/cookies' },
             { text: 'Error Handling', link: '/guide/errors' },
+          ],
+        },
+        {
+          text: 'Authorization',
+          items: [
+            { text: 'RBAC (Role-Based)', link: '/guide/authorization' },
+            { text: 'ABAC (Attribute-Based)', link: '/guide/abac' },
+            { text: 'Resource-Based Access', link: '/guide/resource-access' },
+            {
+              text: 'Authorization Guards',
+              link: '/guide/authorization-guards',
+            },
           ],
         },
         {
