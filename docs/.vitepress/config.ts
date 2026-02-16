@@ -39,6 +39,18 @@ export default defineConfig({
           ],
         },
         {
+          text: 'Authorization',
+          items: [
+            { text: 'RBAC (Role-Based)', link: '/guide/authorization' },
+            { text: 'ABAC (Attribute-Based)', link: '/guide/abac' },
+            { text: 'Resource-Based Access', link: '/guide/resource-access' },
+            {
+              text: 'Authorization Guards',
+              link: '/guide/authorization-guards',
+            },
+          ],
+        },
+        {
           text: 'Advanced Features',
           items: [
             { text: 'Security Features', link: '/guide/security' },

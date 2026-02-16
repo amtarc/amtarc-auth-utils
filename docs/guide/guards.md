@@ -600,6 +600,223 @@ app.get('/blog', async (req, res) => {
 app.listen(3000);
 ```
 
+## Redirect Management
+
+Auth Utils provides utilities for safely managing authentication redirects, preventing open redirect vulnerabilities.
+
+### Saving Redirect URLs
+
+Store the intended destination URL before redirecting to login:
+
+```typescript
+import { saveAuthRedirect } from '@amtarc/auth-utils/guards';
+
+// Save redirect URL
+app.get('/protected', async (req, res) => {
+  const session = await validateSession(storage, sessionId);
+  
+  if (!session) {
+    // Save current URL for post-login redirect
+    await saveAuthRedirect({
+      storage,
+      userId: 'guest',
+      redirectUrl: req.originalUrl,
+      options: {
+        maxAge: 600000, // 10 minutes
+        allowedDomains: ['example.com'],
+        requireSameDomain: true
+      }
+    });
+    
+    return res.redirect('/login');
+  }
+  
+  res.json({ protected: true });
+});
+```
+
+### Restoring Redirect URLs
+
+Retrieve and use the saved redirect URL after successful authentication:
+
+```typescript
+import { restoreAuthRedirect } from '@amtarc/auth-utils/guards';
+
+app.post('/login', async (req, res) => {
+  // Authenticate user
+  const userId = await authenticateUser(req.body);
+  
+  // Create session
+  const session = await createSession(storage, { userId });
+  
+  // Restore saved redirect URL
+  const redirectUrl = await restoreAuthRedirect({
+    storage,
+    userId,
+    defaultUrl: '/dashboard',
+    options: {
+      allowedDomains: ['example.com'],
+      requireSameDomain: true
+    }
+  });
+  
+  res.redirect(redirectUrl);
+});
+```
+
+### Peeking Redirect URLs
+
+Check the saved redirect URL without removing it:
+
+```typescript
+import { peekAuthRedirect } from '@amtarc/auth-utils/guards';
+
+app.get('/login', async (req, res) => {
+  // Check if there's a saved redirect
+  const savedRedirect = await peekAuthRedirect({
+    storage,
+    userId: 'guest'
+  });
+  
+  res.json({
+    showLogin: true,
+    returnUrl: savedRedirect || '/dashboard'
+  });
+});
+```
+
+### Clearing Redirect URLs
+
+Manually clear saved redirects when they're no longer needed:
+
+```typescript
+import { clearAuthRedirect } from '@amtarc/auth-utils/guards';
+
+app.post('/logout', async (req, res) => {
+  const userId = req.session.userId;
+  
+  // Clear any saved redirects
+  await clearAuthRedirect({
+    storage,
+    userId
+  });
+  
+  await invalidateSession(storage, sessionId);
+  res.redirect('/');
+});
+```
+
+### Validating Redirect URLs
+
+Check if a URL is safe for redirection:
+
+```typescript
+import { isValidRedirect } from '@amtarc/auth-utils/guards';
+
+app.get('/redirect', async (req, res) => {
+  const targetUrl = req.query.url as string;
+  
+  const isSafe = isValidRedirect(targetUrl, {
+    allowedDomains: ['example.com', 'app.example.com'],
+    requireSameDomain: false,
+    allowRelative: true
+  });
+  
+  if (isSafe) {
+    res.redirect(targetUrl);
+  } else {
+    res.status(400).json({ error: 'Invalid redirect URL' });
+  }
+});
+```
+
+### Complete Redirect Flow Example
+
+```typescript
+import express from 'express';
+import {
+  requireAuth,
+  saveAuthRedirect,
+  restoreAuthRedirect,
+  clearAuthRedirect
+} from '@amtarc/auth-utils/guards';
+import { MemoryStorageAdapter } from '@amtarc/auth-utils/session';
+
+const app = express();
+const storage = new MemoryStorageAdapter();
+
+// Protected route - save redirect on auth failure
+app.get('/dashboard', async (req, res) => {
+  const guard = requireAuth({
+    storage,
+    getSessionId: async (context) => context.request?.cookies?.session,
+    onSuccess: async (context) => context,
+    onFailure: async (context) => {
+      // Save intended URL
+      await saveAuthRedirect({
+        storage,
+        userId: 'guest',
+        redirectUrl: context.request?.url || '/dashboard',
+        options: {
+          maxAge: 600000, // 10 minutes
+          allowedDomains: ['example.com'],
+          requireSameDomain: true
+        }
+      });
+      
+      return redirect('/login');
+    }
+  });
+  
+  try {
+    const result = await guard({ request: req });
+    res.json({ userId: result.session.userId });
+  } catch (error) {
+    res.redirect('/login');
+  }
+});
+
+// Login route - restore redirect after success
+app.post('/login', async (req, res) => {
+  try {
+    const userId = await authenticateUser(req.body);
+    const session = await createSession(storage, { userId });
+    
+    // Restore saved redirect
+    const redirectUrl = await restoreAuthRedirect({
+      storage,
+      userId,
+      defaultUrl: '/dashboard',
+      options: {
+        allowedDomains: ['example.com'],
+        requireSameDomain: true
+      }
+    });
+    
+    res.cookie('session', session.id);
+    res.redirect(redirectUrl);
+  } catch (error) {
+    res.status(401).json({ error: 'Invalid credentials' });
+  }
+});
+
+// Logout - clear any saved redirects
+app.post('/logout', async (req, res) => {
+  const sessionId = req.cookies.session;
+  const session = await validateSession(storage, sessionId);
+  
+  if (session) {
+    await clearAuthRedirect({ storage, userId: session.userId });
+    await invalidateSession(storage, sessionId);
+  }
+  
+  res.clearCookie('session');
+  res.redirect('/');
+});
+
+app.listen(3000);
+```
+
 ## Best Practices
 
 1. **Use Composition**: Combine guards with `requireAll`, `requireAny` for complex logic

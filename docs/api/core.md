@@ -58,6 +58,18 @@ import {
   CSPBuilder,
   createSecurityHeaders
 } from '@amtarc/auth-utils/security';
+
+// Authorization Module (Phase 4)
+import {
+  PermissionManager,
+  RoleManager,
+  RBACGuards,
+  PolicyEngine,
+  ResourceManager,
+  MemoryRBACStorage,
+  requirePolicy,
+  requireResourceAccess
+} from '@amtarc/auth-utils/authorization';
 ```
 
 ---
@@ -1138,6 +1150,84 @@ function createRBACGuards(options: {
 }): RBACGuards
 ```
 
+### Authorization Guards
+
+#### requirePolicy
+
+Require policy evaluation to pass.
+
+```typescript
+function requirePolicy(
+  policy: Policy,
+  evaluateFn: (
+    policy: Policy,
+    context: PolicyContext
+  ) => Promise<{ granted: boolean; reason?: string }>
+): GuardFunction
+```
+
+**Example:**
+```typescript
+import { requirePolicy, PolicyEngine } from '@amtarc/auth-utils/authorization';
+
+const seniorOnlyPolicy = {
+  id: 'senior-access',
+  name: 'Senior Access',
+  effect: 'permit' as const,
+  conditions: [{
+    attribute: 'level',
+    operator: 'gte' as const,
+    value: 5
+  }]
+};
+
+const guard = requirePolicy(
+  seniorOnlyPolicy,
+  async (policy, context) => {
+    const result = await PolicyEngine.evaluatePolicy(
+      policy,
+      context.attributes,
+      context
+    );
+    return {
+      granted: result.decision === 'permit',
+      reason: result.reason
+    };
+  }
+);
+```
+
+#### requireResourceAccess
+
+Require resource-based access.
+
+```typescript
+function requireResourceAccess(
+  action: ResourceAction,
+  checkFn: (
+    userId: UserId,
+    resourceId: ResourceId,
+    action: ResourceAction
+  ) => Promise<boolean>
+): GuardFunction
+```
+
+**Example:**
+```typescript
+import { requireResourceAccess, ResourceManager } from '@amtarc/auth-utils/authorization';
+
+const guard = requireResourceAccess(
+  'edit',
+  async (userId, resourceId, action) => {
+    return await ResourceManager.canAccess(
+      userId,
+      { type: 'document', id: resourceId },
+      'write'
+    );
+  }
+);
+```
+
 ### RBAC Authorization Errors
 
 All RBAC authorization error classes extend `RBACAuthorizationError`.
@@ -1258,6 +1348,389 @@ import {
   PermissionExistsError,
   ResourceAccessDeniedError
 } from '@amtarc/auth-utils/authorization/types';
+```
+
+---
+
+## ABAC (Attribute-Based Access Control)
+
+Policy-based authorization using user attributes and context.
+
+### PolicyEngine.evaluatePolicy
+
+Evaluate a single policy against user attributes.
+
+```typescript
+class PolicyEngine {
+  static async evaluatePolicy(
+    policy: Policy,
+    attributes: UserAttributes,
+    context?: PolicyContext
+  ): Promise<PolicyResult>
+}
+```
+
+**Parameters:**
+```typescript
+interface Policy {
+  id: string;
+  name: string;
+  description?: string;
+  effect: 'permit' | 'deny';
+  conditions?: PolicyCondition[];
+  timeRestrictions?: TimeRestriction[];
+}
+
+interface UserAttributes {
+  userId: string;
+  role?: string;
+  department?: string;
+  level?: number;
+  [key: string]: unknown;
+}
+
+interface PolicyContext {
+  resource?: string;
+  action?: string;
+  timestamp?: Date;
+  [key: string]: unknown;
+}
+```
+
+**Returns:** `PolicyResult` with decision and metadata
+
+**Example:**
+```typescript
+import { PolicyEngine } from '@amtarc/auth-utils/authorization';
+
+const policy = {
+  id: 'senior-edit',
+  name: 'Senior employees can edit',
+  effect: 'permit' as const,
+  conditions: [
+    {
+      attribute: 'level',
+      operator: 'gte' as const,
+      value: 5
+    }
+  ]
+};
+
+const result = await PolicyEngine.evaluatePolicy(
+  policy,
+  { userId: 'user-123', level: 7 },
+  { action: 'edit', resource: 'document' }
+);
+
+if (result.decision === 'permit') {
+  // Allow action
+}
+```
+
+### PolicyEngine.evaluatePolicies
+
+Evaluate multiple policies with combining algorithms.
+
+```typescript
+class PolicyEngine {
+  static async evaluatePolicies(
+    policies: Policy[],
+    attributes: UserAttributes,
+    context?: PolicyContext,
+    options?: {
+      combiningAlgorithm?: 'permit-overrides' | 'deny-overrides' | 'first-applicable';
+    }
+  ): Promise<PolicyResult>
+}
+```
+
+**Example:**
+```typescript
+const policies = [
+  {
+    id: 'business-hours',
+    effect: 'permit' as const,
+    timeRestrictions: [{
+      type: 'business-hours' as const,
+      start: '09:00',
+      end: '17:00'
+    }]
+  },
+  {
+    id: 'admin-override',
+    effect: 'permit' as const,
+    conditions: [{
+      attribute: 'role',
+      operator: 'equals' as const,
+      value: 'admin'
+    }]
+  }
+];
+
+const result = await PolicyEngine.evaluatePolicies(
+  policies,
+  { userId: 'user-123', role: 'admin' },
+  { action: 'delete' },
+  { combiningAlgorithm: 'permit-overrides' }
+);
+```
+
+### Policy Conditions
+
+Supported condition operators:
+
+```typescript
+type PolicyOperator =
+  | 'equals'
+  | 'not-equals'
+  | 'gt'    // Greater than
+  | 'gte'   // Greater than or equal
+  | 'lt'    // Less than
+  | 'lte'   // Less than or equal
+  | 'in'    // Value in array
+  | 'not-in'
+  | 'contains'
+  | 'starts-with'
+  | 'ends-with';
+
+interface PolicyCondition {
+  attribute: string;
+  operator: PolicyOperator;
+  value: unknown;
+}
+```
+
+### Time Restrictions
+
+```typescript
+interface TimeRestriction {
+  type: 'business-hours' | 'custom';
+  start?: string;  // HH:mm format
+  end?: string;
+  timezone?: string;
+  daysOfWeek?: number[]; // 0-6 (Sunday-Saturday)
+}
+```
+
+**Example:**
+```typescript
+const policy = {
+  id: 'weekend-admin',
+  effect: 'permit' as const,
+  conditions: [
+    {
+      attribute: 'role',
+      operator: 'equals' as const,
+      value: 'admin'
+    }
+  ],
+  timeRestrictions: [{
+    type: 'custom' as const,
+    daysOfWeek: [0, 6], // Sunday and Saturday
+    start: '00:00',
+    end: '23:59'
+  }]
+};
+```
+
+---
+
+## Resource-Based Access Control
+
+Manage access to specific resources with ownership and permissions.
+
+### ResourceManager.grantAccess
+
+Grant a user access to a resource.
+
+```typescript
+class ResourceManager {
+  static async grantAccess(
+    userId: string,
+    resource: ResourceIdentifier,
+    access: ResourceAccess,
+    options?: {
+      storage?: RBACStorageAdapter;
+    }
+  ): Promise<void>
+}
+```
+
+**Parameters:**
+```typescript
+interface ResourceIdentifier {
+  type: string;        // e.g., 'document', 'project'
+  id: string;          // Resource ID
+  ownerId?: string;    // Optional owner
+}
+
+interface ResourceAccess {
+  level: 'read' | 'write' | 'admin' | 'owner';
+  expiresAt?: Date;
+  metadata?: Record<string, unknown>;
+}
+```
+
+**Example:**
+```typescript
+import { ResourceManager } from '@amtarc/auth-utils/authorization';
+
+await ResourceManager.grantAccess(
+  'user-123',
+  { type: 'document', id: 'doc-456', ownerId: 'user-999' },
+  { level: 'write', expiresAt: new Date('2026-12-31') }
+);
+```
+
+### ResourceManager.revokeAccess
+
+Revoke a user's access to a resource.
+
+```typescript
+class ResourceManager {
+  static async revokeAccess(
+    userId: string,
+    resource: ResourceIdentifier,
+    options?: {
+      storage?: RBACStorageAdapter;
+    }
+  ): Promise<void>
+}
+```
+
+**Example:**
+```typescript
+await ResourceManager.revokeAccess(
+  'user-123',
+  { type: 'document', id: 'doc-456' }
+);
+```
+
+### ResourceManager.canAccess
+
+Check if a user can access a resource.
+
+```typescript
+class ResourceManager {
+  static async canAccess(
+    userId: string,
+    resource: ResourceIdentifier,
+    requiredLevel?: 'read' | 'write' | 'admin' | 'owner',
+    options?: {
+      storage?: RBACStorageAdapter;
+    }
+  ): Promise<boolean>
+}
+```
+
+**Example:**
+```typescript
+const canEdit = await ResourceManager.canAccess(
+  'user-123',
+  { type: 'document', id: 'doc-456' },
+  'write'
+);
+
+if (canEdit) {
+  // Allow editing
+}
+```
+
+### ResourceManager.getAccess
+
+Get a user's access level for a resource.
+
+```typescript
+class ResourceManager {
+  static async getAccess(
+    userId: string,
+    resource: ResourceIdentifier,
+    options?: {
+      storage?: RBACStorageAdapter;
+    }
+  ): Promise<ResourceAccess | null>
+}
+```
+
+**Example:**
+```typescript
+const access = await ResourceManager.getAccess(
+  'user-123',
+  { type: 'document', id: 'doc-456' }
+);
+
+if (access) {
+  console.log(`User has ${access.level} access`);
+  console.log(`Expires: ${access.expiresAt}`);
+}
+```
+
+### ResourceManager.listUserResources
+
+List all resources a user has access to.
+
+```typescript
+class ResourceManager {
+  static async listUserResources(
+    userId: string,
+    resourceType?: string,
+    options?: {
+      storage?: RBACStorageAdapter;
+    }
+  ): Promise<Array<{
+    resource: ResourceIdentifier;
+    access: ResourceAccess;
+  }>>
+}
+```
+
+**Example:**
+```typescript
+// List all document access
+const documents = await ResourceManager.listUserResources(
+  'user-123',
+  'document'
+);
+
+for (const { resource, access } of documents) {
+  console.log(`${resource.id}: ${access.level}`);
+}
+```
+
+### Resource Ownership
+
+```typescript
+// Create a resource with owner
+await ResourceManager.grantAccess(
+  'user-123',
+  { 
+    type: 'project', 
+    id: 'proj-789',
+    ownerId: 'user-123' 
+  },
+  { level: 'owner' }
+);
+
+// Grant collaborator access
+await ResourceManager.grantAccess(
+  'user-456',
+  { 
+    type: 'project', 
+    id: 'proj-789',
+    ownerId: 'user-123' 
+  },
+  { level: 'write' }
+);
+
+// Check ownership
+const access = await ResourceManager.getAccess(
+  'user-123',
+  { type: 'project', id: 'proj-789' }
+);
+
+if (access?.level === 'owner') {
+  // User is owner
+}
 ```
 
 ---

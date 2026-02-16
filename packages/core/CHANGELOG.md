@@ -5,6 +5,91 @@ All notable changes to `@amtarc/auth-utils` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-02-16
+
+### Added
+
+**Authorization Package - Phase 4.2-4.4 (ABAC, Resource-Based, Guards):**
+
+**ABAC (Attribute-Based Access Control):**
+- `PolicyEngine` with policy evaluation, caching (5min default TTL), and combining algorithms
+  - Three combining algorithms: deny-overrides (default), allow-overrides, first-applicable
+  - Policy caching with configurable TTL and manual cache management
+  - Support for policy versioning with automatic version increment
+- `RuleEvaluator` with recursive rule evaluation and attribute path resolution
+  - Support for AND, OR, NOT logical operators
+  - Nested rule groups with unlimited depth
+  - Attribute reference resolution with `${attribute.path}` syntax
+- 13 comparison operators for flexible attribute matching:
+  - Equality: `eq`, `neq`
+  - Numeric: `gt`, `gte`, `lt`, `lte`
+  - Array membership: `in`, `notIn`
+  - String/Array contains: `contains`, `notContains`
+  - String patterns: `startsWith`, `endsWith`, `matches` (regex)
+- Four built-in attribute providers:
+  - `UserAttributeProvider` - User attributes (id, role, department, permissions, metadata)
+  - `ResourceAttributeProvider` - Resource attributes (id, type, ownerId, status, createdAt, metadata)
+  - `EnvironmentAttributeProvider` - Context attributes (currentTime, dayOfWeek, hour, ipAddress, userAgent)
+  - `CustomAttributeProvider` - Extensible for domain-specific attributes
+- `MemoryPolicyStorage` with filtering by effect, resourceType, and action
+- 39 comprehensive tests for operators, rule evaluation, and policy engine
+
+**Resource-Based Access Control:**
+- `ResourceManager` with full CRUD operations and permission management
+  - Grant/revoke access with optional expiration timestamps
+  - Check resource access with action-based filtering
+  - Transfer ownership with audit trailing (grantedBy tracking)
+  - List user resources and resource users with optional filtering
+  - Automatic permission cleanup on resource deletion
+- Nine standard resource actions:
+  - `CREATE`, `READ`, `UPDATE`, `DELETE` - Basic CRUD operations
+  - `ADMIN` - Full administrative access
+  - `SHARE` - Share resources with others
+  - `COMMENT` - Add comments/feedback
+  - `DOWNLOAD` - Download resource content
+  - `EXECUTE` - Run/execute resources
+- Five pre-built ownership patterns:
+  - `createFullOwnerAccess` - Complete control (all actions)
+  - `createReadWriteOwner` - Modify but not delete (READ, UPDATE, SHARE, COMMENT)
+  - `createReadOnlyOwner` - View only (READ, DOWNLOAD)
+  - `createTeamBasedAccess` - Team membership validation
+  - `createOrganizationAccess` - Organization membership validation
+- Permission scopes: `own`, `team`, `organization`, `all`
+- `MemoryResourceStorage` with user and resource indexing
+- `createCustomOwnershipRule` for domain-specific ownership logic
+- 21 comprehensive tests for resource manager and ownership patterns
+
+**Unified Authorization Guards:**
+- Eight guard functions for declarative access control:
+  - `requirePermission` - RBAC permission checking
+  - `requireRole` - RBAC role validation
+  - `requirePolicy` - ABAC policy evaluation
+  - `requireResourceAccess` - Resource-based access control
+  - `requireOwnership` - Resource ownership validation
+  - `combineGuardsAnd` - Combine guards with AND logic (all must pass)
+  - `combineGuardsOr` - Combine guards with OR logic (any can pass)
+  - `createCustomGuard` - Create domain-specific validators
+- Composable guard system with context merging
+- Specific error throwing (InsufficientPermissionError, InsufficientRoleError, ResourceAccessDeniedError)
+- Type-safe guard contexts with TypeScript generics
+- 21 comprehensive tests for all guard types and combinations
+
+**New Exports:**
+- `@amtarc/auth-utils/authorization/abac` - Complete ABAC module
+- `@amtarc/auth-utils/authorization/resource` - Resource-based access control
+- `@amtarc/auth-utils/authorization/guards` - Unified authorization guards
+
+### Tests
+- **768 total tests** (100% passing) - Added 81 new tests
+  - ABAC: 39 tests (operators, rule evaluator, policy engine)
+  - Resource: 21 tests (resource manager, ownership patterns)
+  - Guards: 21 tests (all guard types, composition, error handling)
+
+### Documentation
+- Updated authorization guide header to include ABAC, Resource-based, and Guards
+- Added TypeScript type exports for all new modules
+- Comprehensive inline documentation with JSDoc comments
+
 ## [1.3.1] - 2026-02-16
 
 ### Fixed

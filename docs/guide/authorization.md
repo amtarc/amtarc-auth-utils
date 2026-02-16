@@ -1,10 +1,17 @@
-# Authorization & RBAC
+# Role-Based Access Control (RBAC)
 
-Complete guide to Role-Based Access Control (RBAC) with permissions, role hierarchy, and access guards.
+Complete guide to RBAC with permissions, role hierarchy, and access guards.
+
+::: tip Other Authorization Methods
+This page covers **RBAC** (Role-Based Access Control). For other authorization methods:
+- [ABAC](/guide/abac) - Attribute-Based Access Control for policy-driven authorization
+- [Resource-Based Access](/guide/resource-access) - Fine-grained resource ownership and permissions
+- [Authorization Guards](/guide/authorization-guards) - Unified guards combining all authorization types
+:::
 
 ## Overview
 
-The authorization module provides enterprise-grade RBAC features:
+RBAC provides enterprise-grade role and permission management:
 
 - **Role Management**: Define roles with hierarchical inheritance
 - **Permission System**: Granular permission definitions and assignments
@@ -905,7 +912,9 @@ await hasAllPermissions(userId, permissions);
 
 ## See Also
 
-- [Guards & Middleware](/guide/guards) - Declarative auth guards
+- [ABAC](/guide/abac) - Attribute-Based Access Control for policy-driven authorization
+- [Resource-Based Access](/guide/resource-access) - Fine-grained resource ownership and permissions
+- [Authorization Guards](/guide/authorization-guards) - Unified guards combining all authorization types
+- [Authentication Guards](/guide/guards) - Login/logout route protection  
 - [Error Handling](/guide/errors) - Error types and handling
-- [Session Management](/guide/sessions) - User session management
 - [API Reference](/api/core) - Complete API documentation

@@ -19,16 +19,18 @@ yarn add @amtarc/auth-utils
 
 ### Session Management
 - Session creation, validation, and refresh
-- Multi-device session support
+- Multi-device session support (`listUserSessions`, `revokeDeviceSession`, `findSessionByDevice`)
 - Session fingerprinting for device tracking
+- Concurrent session limits with automatic enforcement
+- Session invalidation (single device, all devices, all except current)
 - Storage adapter pattern (Memory, custom adapters)
 - Session ID rotation for security
-- Concurrent session limits
 
 ### Guards & Route Protection
 - Authentication guards (`requireAuth`, `requireGuest`)
 - Composable guard system (`requireAny`, `requireAll`)
-- Redirect management with open redirect prevention
+- Redirect management (`saveAuthRedirect`, `restoreAuthRedirect`, `peekAuthRedirect`, `clearAuthRedirect`, `isValidRedirect`)
+- Open redirect prevention with domain validation
 - Framework-agnostic design
 
 ### Cookie Management
@@ -48,11 +50,19 @@ yarn add @amtarc/auth-utils
 
 ### Authorization
 - **RBAC (Role-Based Access Control)** with permission inheritance
-- Scoped role assignments (tenant, organization, project)
-- Role hierarchy validation with circular dependency detection
-- Permission and role management with auto-ID generation
-- Authorization guards for route/resource protection
-- Expiring role assignments with automatic cleanup
+  - Scoped role assignments (tenant, organization, project)
+  - Role hierarchy validation with circular dependency detection (up to 10 levels)
+  - Permission and role management with auto-ID generation
+  - Expiring role assignments with automatic cleanup
+- **ABAC (Attribute-Based Access Control)** with policy engine
+  - Policy evaluation with user attributes and context
+  - Time-based policies and custom conditions
+  - Policy combining algorithms (permit-overrides, deny-overrides)
+- **Resource-based Access Control**
+  - Grant/revoke access to specific resources
+  - Resource ownership and access level management
+  - Resource metadata and hierarchical permissions
+- Authorization guards (`requirePermission`, `requireRole`, `requirePolicy`)
 - Memory storage adapter (custom adapters supported)
 
 ### Error Handling
@@ -153,15 +163,18 @@ For complete API reference with all methods, parameters, and examples, see our [
 - `refreshSession()` - Update timestamps and rotate IDs
 - `invalidateSession()` - End sessions
 - `MemoryStorageAdapter` - In-memory session storage
-- `listUserSessions()` - Multi-device session management
+- `listUserSessions()` / `revokeDeviceSession()` - Multi-device management
+- `enforceConcurrentSessionLimit()` - Limit concurrent sessions
+- `countUserSessions()` / `findSessionByDevice()` - Session queries
+- `invalidateUserSessions()` - Bulk session invalidation
 - `generateSessionFingerprint()` - Device tracking
 
 **Guards & Protection:**
 - `requireAuth()` - Require authenticated users
 - `requireGuest()` - Require unauthenticated users
 - `requireAny()` / `requireAll()` - Composable guards
-- `isValidRedirect()` - Prevent open redirects
-- `saveAuthRedirect()` / `restoreAuthRedirect()` - Redirect flow
+- `saveAuthRedirect()` / `restoreAuthRedirect()` / `peekAuthRedirect()` - Redirect management
+- `clearAuthRedirect()` / `isValidRedirect()` - Redirect utilities
 
 **Cookie Management:**
 - `createAuthCookie()` / `parseAuthCookies()` - Cookie strings
@@ -185,16 +198,20 @@ For complete API reference with all methods, parameters, and examples, see our [
 - `PermissionManager` - Define and manage permissions
 - `RoleManager` - Create roles, grant permissions, assign to users
 - `RoleHierarchy` - Validate role hierarchies with circular detection
-- `RBACGuards` - Authorization guards (requireRole, requirePermission)
+- `PolicyEngine` - ABAC policy evaluation with attributes and conditions
+- `ResourceManager` - Grant/revoke access to resources with ownership
+- `RBACGuards` - Authorization guards (requireRole, requirePermission, requirePolicy)
 - `MemoryRBACStorage` - In-memory storage with expiration
 - Role inheritance (up to 10 levels)
 - Scoped assignments (tenant, organization, project)
-- Batch operations for roles and permissions
+- Time-based policies and resource ownership
 
 **Error Handling:**
 - `AuthUtilsError` - Base error with HTTP status codes
 - `UnauthenticatedError`, `UnauthorizedError` - Auth errors (401/403)
 - `SessionExpiredError`, `SessionNotFoundError` - Session errors
+- `CSRFError`, `RateLimitError` - Security errors (403/429)
+- `InsufficientPermissionsError` - Authorization errors (403)
 - `isAuthUtilsError()`, `getErrorStatusCode()` - Type guards
 - `serializeError()` - Safe JSON serialization
 

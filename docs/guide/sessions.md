@@ -256,68 +256,97 @@ class RedisStorageAdapter<T = unknown> implements SessionStorageAdapter<T> {
 
 ## Multi-Device Sessions
 
-### Add Device Session
+### List User Sessions
+
+Get all active sessions for a user across all devices:
 
 ```typescript
-import { addDeviceSession } from '@amtarc/auth-utils/session';
+import { listUserSessions } from '@amtarc/auth-utils/session';
 
-const device = await addDeviceSession(
-  storage,
-  'user-123',
-  session.sessionId,
-  {
-    userAgent: req.headers['user-agent'],
-    ip: req.ip,
-    platform: 'web'
-  },
-  {
-    maxDevices: 5, // Limit to 5 concurrent devices
-    trustDevice: true
-  }
-);
+const sessions = await listUserSessions('user-123', storage, {
+  currentSessionId: req.session.id // Mark current session
+});
 
-console.log(device);
-// {
-//   deviceId: 'dev_abc123',
-//   userId: 'user-123',
-//   sessionId: 'sess_abc123',
-//   fingerprint: '...',
-//   trusted: true,
-//   createdAt: 1234567890
-// }
-```
-
-### Get Active Devices
-
-```typescript
-import { getActiveDevices } from '@amtarc/auth-utils/session';
-
-const devices = await getActiveDevices(storage, 'user-123');
-
-console.log(`User has ${devices.length} active devices`);
-devices.forEach(device => {
-  console.log(`- ${device.deviceId} (trusted: ${device.trusted})`);
+console.log(`User has ${sessions.length} active sessions`);
+sessions.forEach(session => {
+  console.log(`Device: ${session.device?.name || 'Unknown'}`);
+  console.log(`Last active: ${session.lastActiveAt}`);
+  console.log(`Current: ${session.current}`);
 });
 ```
 
-### Revoke Device
+### Revoke Device Session
+
+Revoke a specific session (validates ownership):
 
 ```typescript
-import { revokeDevice } from '@amtarc/auth-utils/session';
+import { revokeDeviceSession } from '@amtarc/auth-utils/session';
 
-// Revoke specific device
-await revokeDevice(storage, 'user-123', 'dev_abc123');
-
-// Session for that device is invalidated
+// User clicks "Logout" on a specific device
+await revokeDeviceSession('user-123', 'session-laptop-abc', storage);
 ```
 
-### Revoke All Devices Except Current
+### Invalidate User Sessions
+
+Invalidate all sessions for a user, optionally keeping the current one:
 
 ```typescript
-import { revokeAllDevicesExcept } from '@amtarc/auth-utils/session';
+import { invalidateUserSessions } from '@amtarc/auth-utils/session';
 
-await revokeAllDevicesExcept(storage, 'user-123', currentDeviceId);
-// Useful for "logout all other devices" feature
+// Logout all devices
+await invalidateUserSessions('user-123', storage);
+
+// Logout all OTHER devices (keep current)
+await invalidateUserSessions('user-123', storage, {
+  except: currentSessionId,
+  reason: 'User requested logout from other devices'
+});
+```
+
+### Enforce Session Limits
+
+Automatically enforce concurrent session limits:
+
+```typescript
+import { enforceConcurrentSessionLimit } from '@amtarc/auth-utils/session';
+
+// After creating a new session, enforce maximum devices
+const removedCount = await enforceConcurrentSessionLimit('user-123', storage, 5);
+
+if (removedCount > 0) {
+  console.log(`Removed ${removedCount} oldest session(s)`);
+}
+```
+
+### Count User Sessions
+
+Get the number of active sessions:
+
+```typescript
+import { countUserSessions } from '@amtarc/auth-utils/session';
+
+const count = await countUserSessions('user-123', storage);
+
+if (count > 10) {
+  console.warn('User has many active sessions - possible security issue');
+}
+```
+
+### Find Session by Device
+
+Find a specific session by device characteristics:
+
+```typescript
+import { findSessionByDevice } from '@amtarc/auth-utils/session';
+
+const mobileSession = await findSessionByDevice('user-123', storage, {
+  type: 'mobile',
+  os: 'iOS'
+});
+
+if (mobileSession) {
+  console.log('Found iOS mobile session:', mobileSession.id);
+}
 ```
 
 ## Session Fingerprinting
@@ -380,13 +409,15 @@ import {
   createSession,
   validateSession,
   refreshSession,
-  invalidateSession
+  invalidateSession,
+  invalidateUserSessions
 } from '@amtarc/auth-utils';
 import { MemoryStorageAdapter } from '@amtarc/auth-utils/session';
 import {
   generateSessionFingerprint,
   validateFingerprint,
-  addDeviceSession
+  listUserSessions,
+  enforceConcurrentSessionLimit
 } from '@amtarc/auth-utils/session';
 
 // Setup
@@ -409,11 +440,8 @@ async function login(userId: string, req: Request) {
 
   await storage.set(session.sessionId, session);
 
-  // Track device
-  await addDeviceSession(storage, userId, session.sessionId, {
-    userAgent: req.headers['user-agent'],
-    ip: req.ip
-  }, { maxDevices: 5 });
+  // Enforce device limit (max 5 concurrent sessions)
+  await enforceConcurrentSessionLimit(userId, storage, 5);
 
   return session;
 }
@@ -451,11 +479,28 @@ async function validateRequest(sessionId: string, req: Request) {
   return session;
 }
 
-// Logout
-async function logout(sessionId: string, userId: string) {
+// Get user's active sessions
+async function getActiveSessions(userId: string, currentSessionId: string) {
+  return await listUserSessions(userId, storage, {
+    currentSessionId
+  });
+}
+
+// Logout single device
+async function logout(sessionId: string) {
   await invalidateSession(storage, sessionId);
-  // Or logout all devices:
-  // await invalidateAllSessions(storage, userId);
+}
+
+// Logout all devices
+async function logoutAllDevices(userId: string) {
+  await invalidateUserSessions(userId, storage);
+}
+
+// Logout all OTHER devices (keep current)
+async function logoutOtherDevices(userId: string, currentSessionId: string) {
+  await invalidateUserSessions(userId, storage, {
+    except: currentSessionId
+  });
 }
 ```
 
